@@ -42,6 +42,13 @@
   padding: 0;
 }
 
+/* Sélecteur pour enlever l'outline et le box-shadow */
+.phone-input input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+
 @layer base {
     /* Start Custom styles for the modal scrollbar */
     .sidebar-scrollbar {
@@ -52,3 +59,23 @@
       display: none;
     }
   }
+
+  @media print {
+  /* On cache tout par défaut */
+  body * {
+    visibility: hidden;
+  }
+  /* On n'affiche que le badge et son contenu */
+  #printable-badge, #printable-badge * {
+    visibility: visible;
+  }
+  /* On positionne le badge en haut à gauche de la feuille */
+  #printable-badge {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none;
+    box-shadow: none;
+  }
+}

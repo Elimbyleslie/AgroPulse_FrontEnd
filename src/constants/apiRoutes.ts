@@ -8,12 +8,13 @@ export const ROUTES = {
   AUTH_RESEND_OTP: "auth/resend-otp",
   AUTH_REFRESH_TOKEN: "auth/refresh",
   AUTH_LOGOUT: "auth/logout",
-  AUTH_VERIFY_EMAIL: "auth/verify-email",
+  AUTH_VERIFY_EMAIL_OTP: "auth/verify-email-otp",
   AUTH_SEND_EMAIL_VERIFICATION :"auth/send-email-verification-otp",
   AUTH_RESET_PASSWORD : "auth/reset-password",
   AUTH_UPDATE_PASSWORD : "auth/update-password", 
   AUTH_CHANGE_PASSWORD : "auth/change-password",
-
+  PROFILE : "users/profile",
+  AUTH_ME: "auth/me",
 
 
   // -----------------------------
@@ -56,7 +57,7 @@ export const ROUTES = {
   ANIMAL_CREATE: "animals",
   ANIMAL_UPDATE: (id: string | number) => `animals/${id}`,
   ANIMAL_DELETE: (id: string | number) => `animals/${id}`,
-  ANIMAL_GET_BY_ID: (id: string | number) => `animals/${id}`,
+  ANIMAL_GET_BY_ID: "animals",
 
   BIRTH_LIST: "births",
   BIRTH_CREATE: "births",
@@ -126,7 +127,10 @@ export const ROUTES = {
   // -----------------------------
   FARM_LIST: "farms",
   FARM_CREATE: "farms",
+  FARM_GET_BY_ID: (id: string | number) => `farms/${id}`,
   FARM_UPDATE: (id: string | number) => `farms/${id}`,
+  FARM_DELETE: (id: string | number) => `farms/${id}`,
+  MY_FARMS: "farms/myfarms",
 
   FARM_TASK_LIST: "FarmTasks",
   FARM_TASK_CREATE: "FarmTasks",
@@ -135,11 +139,15 @@ export const ROUTES = {
 
   BARN_LIST: "barns",
   BARN_CREATE: "barns",
+  BARN_GET_BY_ID: (id: string | number) => `barns/${id}`,
+  BARN_DELETE: (id: string | number) => `barns/${id}`,
   BARN_UPDATE: (id: string | number) => `barns/${id}`,
 
   PEN_LIST: "pens",
   PEN_CREATE: "pens",
   PEN_UPDATE: (id: string | number) => `pens/${id}`,
+  PEN_DELETE: (id: string | number) => `pens/${id}`,
+  GET_PEN_BY_ID: "pens",
 
   // -----------------------------
   // BIOLOGICAL MANAGEMENT
@@ -156,11 +164,13 @@ export const ROUTES = {
   HERD_CREATE: "herds",
   HERD_UPDATE: (id: string | number) => `herds/${id}`,
   HERD_DELETE: (id: string | number) => `herds/${id}`,
+  GET_HERD_BY_ID: "herds",
 
   LOT_LIST: "lots",
   LOT_CREATE: "lots",
   LOT_UPDATE: (id: string | number) => `lots/${id}`,
   LOT_DELETE: (id: string | number) => `lots/${id}`,
+  GET_LOT_BY_ID : "lots",
 
   // -----------------------------
   // STRUCTURAL MANAGEMENT

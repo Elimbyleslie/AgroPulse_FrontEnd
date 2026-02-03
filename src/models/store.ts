@@ -17,6 +17,41 @@ export type Pagination = {
   totalItems: number;
 };
 
+
+export type ApiError<TError = unknown> = {
+  meta: {
+    status: number;
+    message: string;
+  };
+  error?: TError;
+};
+
+
+export type AuthErrorPayload = {
+  emailVerified?: boolean;
+  email?: string;
+};
+
+
+
+
+// Fonction helper pour typer les erreurs
+export function isApiError(error: unknown): error is ApiError {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    ('code' in error || 'message' in error)
+  );
+}
+
+export interface ThunkApi {
+  state: RootState;
+  dispatch: AppDispatch;
+  rejectValue: ApiError;
+}
+
+
+// --- Types Utilitaires ---
 export enum LoadingType {
   IDLE = "idle",
   PENDING = "pending",
@@ -24,23 +59,41 @@ export enum LoadingType {
   REJECTED = "rejected",
 }
 
+export type Token = {
+  type: string;
+  accessToken: string;
+  refreshToken: string;
+  expires_in: number;
+};
+
+// --- Domaines ---
+export interface AuthUser {
+  id: number;
+  name: string;
+  userName: string;
+  email: string;
+  phone?: string | null;
+  photo?: string;
+  status: string;
+  emailVerified: boolean;
+  roles: string[]; // On garde le tableau de strings pour simplifier
+  permissions: string[];
+}
+
+// --- État Global du Slice ---
+export type AuthState = {
+  user: AuthUser | null;
+  token: string | null; // Juste l'accessToken pour les headers
+  status: LoadingType;
+  error: ApiError | null;
+};
+
+// --- Structure de réponse API standard ---
 export type ApiResponse<T> = {
   meta: {
     message: string;
     status: number;
   };
   data: T;
-  error: null | string | Record<string, unknown>;
+  token?: Token;
 };
-
-export type ApiErrorResponse = {
-  message: string;
-  code?: number;
-  errorFields?: Record<string, string>;
-};
-
-export interface ThunkApi {
-  state: RootState;
-  dispatch: AppDispatch;
-  rejectValue: ApiErrorResponse;
-}

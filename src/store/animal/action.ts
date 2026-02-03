@@ -1,0 +1,122 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { fetchWithAuth } from "../../lib/fetchwithAuth";
+import extractApiError from "../../lib/errorextrator";
+import { createAsyncThunk } from "@reduxjs/toolkit";
+import { ApiResponse, ThunkApi, ApiError } from "../../models/store";
+import { ROUTES } from "../../constants/apiRoutes";
+import { Animal } from "../../models/animal";
+import { handleApiResult } from "../../lib/handleApiResult";
+
+// GET ALL DE TOUT LES ANIMAUX WITH PAGINATION ET SEARCH
+export const getAllAnimals = createAsyncThunk(
+  "animal/list",
+  async (args: { limit?: number; page?: number; farmId: number }, apiThunk) => {
+    try {
+      // 1. On construit l'URL proprement avec URLSearchParams
+      const params = new URLSearchParams();
+      params.append("limit", args.limit?.toString() || "10");
+      params.append("page", (args.page || 1).toString());
+
+      if (args.farmId) {
+        params.append("farmId", args.farmId.toString());
+      } else {
+        // Si on arrive ici sans farmId, on stoppe tout de suite
+        return apiThunk.rejectWithValue("farmId obligatoire");
+      }
+
+      // 2. Appel API avec l'URL construite
+      const result = await fetchWithAuth(
+        `${ROUTES.ANIMAL_LIST}?${params.toString()}`,
+      );
+
+      return result;
+    } catch (error) {
+      return apiThunk.rejectWithValue(error);
+    }
+  },
+);
+
+//GET BY ID DE ANIMAL
+
+export const getAnimalById = createAsyncThunk<
+  ApiResponse<Animal>,
+  number,
+  ThunkApi
+>("animal/get", async (id, apiThunk) => {
+  try {
+    const result = await fetchWithAuth(`${ROUTES.ANIMAL_GET_BY_ID}/${id}`);
+
+    const error = handleApiResult(result, "Animal introuvable");
+    if (error)
+      return apiThunk.rejectWithValue(extractApiError(error) as ApiError);
+
+    return result!;
+  } catch (err) {
+    return apiThunk.rejectWithValue(extractApiError(err));
+  }
+});
+
+// CREATE ANIMAL
+
+export const createAnimal = createAsyncThunk<
+  ApiResponse<Animal>,
+  FormData,
+  ThunkApi
+>("animal/create", async (formData, apiThunk) => {
+  try {
+    const result = await fetchWithAuth(ROUTES.ANIMAL_CREATE, {
+      method: "POST",
+      body: formData,
+    });
+    const error = handleApiResult(result, "Erreur lors de la creation");
+    if (error)
+      return apiThunk.rejectWithValue(extractApiError(error) as ApiError);
+    return result!;
+  } catch (err) {
+    return apiThunk.rejectWithValue(extractApiError(err));
+  }
+});
+
+// UPDATE ANIMAL
+
+export const updateAnimal = createAsyncThunk<
+  ApiResponse<Animal>,
+  { id: number; data: any },
+  ThunkApi
+>("animal/update", async ({ id, data }, apiThunk) => {
+  try {
+    const result = await fetchWithAuth(`${ROUTES.ANIMAL_UPDATE(id)}`, {
+      method: "PUT",
+      body: data instanceof FormData ? data : JSON.stringify(data),
+    });
+
+    const error = handleApiResult(result, "Erreur lors de la modification");
+    if (error)
+      return apiThunk.rejectWithValue(extractApiError(error) as ApiError);
+
+    return result!;
+  } catch (err) {
+    return apiThunk.rejectWithValue(extractApiError(err));
+  }
+});
+// DELETE ANIMAL
+
+export const deleteAnimal = createAsyncThunk<
+  ApiResponse<null>,
+  number,
+  ThunkApi
+>("animal/delete", async (id, apiThunk) => {
+  try {
+    const result = await fetchWithAuth(`${ROUTES.ANIMAL_DELETE(id)}`, {
+      method: "DELETE",
+    });
+
+    const error = handleApiResult(result, "Erreur lors de la suppression");
+    if (error)
+      return apiThunk.rejectWithValue(extractApiError(error) as ApiError);
+
+    return result!;
+  } catch (err) {
+    return apiThunk.rejectWithValue(extractApiError(err));
+  }
+});

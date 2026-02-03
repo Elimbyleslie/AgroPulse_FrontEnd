@@ -8,7 +8,7 @@ export default {
    extend: {
       colors: {
         text: "#5A5A5A",
-        vert: "#0D8849",
+        vert: "#16A34A",
         jaune: "#E3BA3E",
         modalBg: "#264555",
         bleu: "#607FE2",
@@ -16,10 +16,15 @@ export default {
         dark_vert: "#084C29",
         // bg_dash: "#FBFCFC",
         btn: "#D6D6D6",
-        bg_dash:"#F5F6F1",
+        bg_dash:"#F8FAFC",
         news: "#E9E4CB",
         white: "#FFFFFF",
         darkText: "#2B2B2B",
+        darkVert: "#0D8821",
+        darkJaune: "#D9B139",
+        darkBleu: "#607FE2",
+        darkRouge: "#EC1313",
+        darkBleuVert: "#0D8849",
       },
       fontFamily: {
         poppins: ["Poppins", "sans-serif"],
