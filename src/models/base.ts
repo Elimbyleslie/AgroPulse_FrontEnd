@@ -1,5 +1,5 @@
 export interface BaseEntity {
-  id: string;
+  id: number;
   createdAt: Date;
   updatedAt:Date;
 }
@@ -7,12 +7,14 @@ export interface BaseEntity {
 
 export enum Role {
   SUPER_ADMIN = 'super_admin',
+  ADMIN = 'admin',
   ORGANIZATION_OWNER='organization_owner',
   FARM_MANAGER = 'farm_manager',
+  FARMER = 'farmer',
   VETERINAIRE = 'veterinaire',
   EQUIPMENT_MANAGER = 'equipement_manager',
   FINANCE_MANAGER='finance_manager',
-  FERMIER='fermier'
+ 
 }
 
 export enum PermissionType {
