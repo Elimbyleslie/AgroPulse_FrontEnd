@@ -25,7 +25,7 @@ const SelectInput = ({
 }: SelectInputProps) => {
   const [open, setOpen] = useState(false);
 
-  const selectedOption = options.find(opt => opt.value === value);
+  const selectedOption = options.find((opt) => opt.value === value);
 
   return (
     <div className="relative">
@@ -33,7 +33,7 @@ const SelectInput = ({
       <button
         type="button"
         disabled={disabled}
-        onClick={() => setOpen(prev => !prev)}
+        onClick={() => setOpen((prev) => !prev)}
         className={`w-full flex items-center justify-between rounded-lg border px-3 py-2 text-left
           ${disabled ? "bg-gray-100 cursor-not-allowed" : "bg-white"}
         `}
@@ -53,16 +53,16 @@ const SelectInput = ({
       {open && !disabled && !loading && (
         <ul className="absolute z-50 mt-1 w-full max-h-60 overflow-auto rounded-lg border bg-white shadow">
           {options.length === 0 && (
-            <li className="px-3 py-2 text-sm text-gray-400">
-              Aucune option
-            </li>
+            <li className="px-3 py-2 text-sm text-gray-400">Aucune option</li>
           )}
 
-          {options.map(option => (
+          {options.map((option) => (
             <li
               key={option.value}
               onClick={() => {
                 onChange(option.value);
+                console.log("SelectInput onChange →", value);
+
                 setOpen(false);
               }}
               className="cursor-pointer px-3 py-2 text-sm hover:bg-green-50"

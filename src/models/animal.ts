@@ -1,11 +1,17 @@
 
 import { Breed } from "./breed";
 import { Species } from "./species";
+import { FecthLot } from "./lot";
+import { Herd } from "./herd";
+import { Pen } from "./pen";
 export interface Animal {
   id: number;
   name: string;
   farmId: number;
   lotId?: number;
+  herdId?: number;
+  penId?: number;
+  barnId?: number;
   speciesId: number;
   breedId?: number;
   photo?: string;
@@ -19,6 +25,10 @@ export interface Animal {
   updatedAt?:string;
   species?: Species;
   breed?: Breed;
+  lot?: FecthLot;
+  herd?:Herd;
+  pen?:Pen;
+
 }
 
 export interface AnimalForm {

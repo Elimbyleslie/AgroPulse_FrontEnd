@@ -55,7 +55,7 @@ const Header: React.FC = () => {
           </NavLink>
           <NavLink
             className={
-              "text-white px-4 py-1 rounded-full text-center  bg-[#E3BA3E] hover:border-[3px]  hover:border-[#E3BA3E] hover:text-[#E3BA3E]  hover:bg-white "
+              "text-white px-4 py-1 rounded-full text-center  bg-[#E3BA3E] border-[3px]   border-[#E3BA3E] hover:text-[#E3BA3E]  hover:bg-white "
             }
             to={PATH_AUTH.REGISTER}
           >

@@ -29,36 +29,34 @@ const GoogleCallback = () => {
           // 2. Récupère le profil complet (déclenché par le jeton tout juste enregistré)
           // .unwrap() renvoie le payload (le contenu de response.data dans ton action)
           const response = await dispatch(getMe()).unwrap();
-          
+
           console.log("🔍 Réponse déballée de getMe:", response);
 
           // 3. Extraction sécurisée selon ta structure : { data: { user: { ... } } }
           // On vérifie response.data.user (si l'action retourne response.data)
           // ou response.user (si l'action retourne directement l'objet métier)
           // 1. Extraction précise
-// Puisque ta console montre { "user": { ... } }, on accède directement à response.user
-const userData = response?.data?.user; 
+          // Puisque ta console montre { "user": { ... } }, on accède directement à response.user
+          const userData = response?.data?.user;
 
-console.log("👤 userData extrait avec succès:", userData);
+          console.log("👤 userData extrait avec succès:", userData);
 
-// 2. Vérification
-if (!userData || !userData.email) {
-  console.error("❌ Erreur : userData est vide ou sans email", userData);
-  throw new Error("Structure de données utilisateur invalide");
-}
+          // 2. Vérification
+          if (!userData || !userData.email) {
+            console.error(
+              "❌ Erreur : userData est vide ou sans email",
+              userData,
+            );
+            throw new Error("Structure de données utilisateur invalide");
+          }
 
-// 3. Suite de la logique (Redirect)
-toast.success(`Bienvenue ${userData.name}`);
-
-if (userData.emailVerified === false) {
-  navigate(PATH_AUTH.VERIFY_EMAIL_OTP, { 
-    state: { email: userData.email }, 
-    replace: true 
-  });
-} else {
-  // Puisque emailVerified est true dans ton log, il ira ici :
-  navigate("/main/onboarding", { replace: true });
-}
+          // 3. Suite de la logique (Redirect)
+          toast.success(`Bienvenue ${userData.name}`);
+          if (userData.onboardingComplete === false) {
+            navigate("/auth/onboarding", { replace: true });
+          } else {
+            navigate("/main", { replace: true });
+          }
         } catch (err) {
           console.error("Erreur lors de la synchronisation Google:", err);
           toast.error("Échec de la connexion : profil introuvable");
@@ -71,7 +69,7 @@ if (userData.emailVerified === false) {
       // Cas où on arrive sur cette page sans token (erreur ou accès direct)
       const error = params.get("error");
       if (error) console.error("Google Auth Error:", error);
-      
+
       toast.error("Session Google expirée ou invalide");
       navigate(PATH_AUTH.LOGIN, { replace: true });
     }

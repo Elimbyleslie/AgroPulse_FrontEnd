@@ -24,7 +24,7 @@ const Register: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  // ✅ Utilisation des bons sélecteurs
+  //  Utilisation des bons sélecteurs
   const authStatus = useAppSelector(selectAuthStatus);
   const authError = useAppSelector(selectAuthError);
 
@@ -151,7 +151,7 @@ const Register: React.FC = () => {
       </div>
 
       {/* FORMULAIRE */}
-      <div className="flex w-full md:w-1/2 justify-center items-center pt-20 overflow-y-auto">
+      <div className="flex w-full md:w-1/2 justify-center items-center pt-40 overflow-y-auto px-4">
         <div className="w-full max-w-md">
           <h1 className="text-3xl font-semibold text-center mb-6 text-jaune">
             Inscrivez-vous sur <span>Agro</span><span>Pulse</span>

@@ -2,7 +2,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { Barn } from "../../models/barn";
 import { ApiError } from "../../models/store";
-import { RootState } from "../index";
+import { RootState } from "..";
 import {
   getAllBarns,
   getBarnById,

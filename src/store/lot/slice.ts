@@ -2,7 +2,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { FecthLot } from "../../models/lot";
 import { ApiError } from "../../models/store";
-import { RootState } from "../index";
+import { RootState } from "..";
 import {
   getAllLots,
   getLotById,

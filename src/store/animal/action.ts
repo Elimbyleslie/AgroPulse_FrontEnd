@@ -120,3 +120,35 @@ export const deleteAnimal = createAsyncThunk<
     return apiThunk.rejectWithValue(extractApiError(err));
   }
 });
+
+export const assignAnimal = createAsyncThunk(
+  'animal/assign',
+  async ({ id, data }: { id: number; data: { lotId?: number; herdId?: number; penId?: number } }, { rejectWithValue }) => {
+    try {
+      // Passer l'ID dans l'URL
+      const result = await fetchWithAuth(`${ROUTES.ASSIGNANIMALTOLPH}/${id}`, {
+        method: "POST",
+        body: JSON.stringify(data), // Seulement lotId, herdId, penId
+      });
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);
+
+export const unassignAnimal = createAsyncThunk(
+  'animal/unassign',
+  async (id: number, { rejectWithValue }) => {
+    try {
+      // Passer l'ID dans l'URL, pas dans le body
+      const result = await fetchWithAuth(`${ROUTES.UNASSIGNANIMALFROMLPH}/${id}`, {
+        method: "POST",
+        // Pas de body nécessaire
+      });
+      return result;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || error.message);
+    }
+  }
+);

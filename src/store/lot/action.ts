@@ -12,7 +12,7 @@ import { handleApiResult } from "../../lib/handleApiResult";
 export const getAllLots = createAsyncThunk(
   "lot/list",
   async (
-    args: { limit?: number; page?: number; farmId: number; search: string },
+    args: { limit?: number; page?: number; farmId: number; search?: string },
     apiThunk,
   ) => {
     try {

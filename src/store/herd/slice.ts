@@ -2,7 +2,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { Herd } from "../../models/herd";
 import { ApiError } from "../../models/store";
-import { RootState } from "../index";
+import { RootState } from "..";
 import {
   getAllHerds,
   getHerdById,
