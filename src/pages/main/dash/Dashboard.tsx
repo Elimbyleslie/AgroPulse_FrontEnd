@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useAppSelector } from "../../../hooks/store";
 import {
   Dog,
@@ -27,7 +27,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  LabelList
+  LabelList,
 } from "recharts";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -37,6 +37,9 @@ import Modal from "../../../components/UI/Modal";
 import AnimalForm from "../../../components/Modal/AnimalForm";
 import { getAllAnimals } from "../../../store/animal/action";
 import { useAppDispatch } from "../../../hooks/store";
+import { AlertTriangle, Package, Wrench } from "lucide-react";
+import { fetchAlertsByFarmId } from "../../../store/alerts/action";
+import { LoadingType } from "../../../models/store";
 
 // Import des nouveaux composants de gestion
 import BarnList from "../barnList";
@@ -44,7 +47,12 @@ import LotDashboard from "../lotList";
 import PenList from "../../../components/Modal/Pen/PenList";
 import HerdList from "../../../components/Modal/Herd/HerdList";
 
-type TabType = 'overview' | 'barns' | 'lots' | 'pens' | 'herds';
+import { selectCurrentFarm } from "../../../store/farm/slice";
+import { fetchWithAuthOrganizations } from "../../../store/organization/action";
+import { getAllFarms } from "../../../store/farm/action";
+
+
+type TabType = "overview" | "barns" | "lots" | "pens" | "herds";
 
 function MainDashboard() {
   const organizations =
@@ -52,12 +60,24 @@ function MainDashboard() {
     [];
   const farms = useAppSelector((state) => state.farms.farmList.entities) ?? [];
   const allAnimals =
-    useAppSelector((state) => state.animal.pagination?.entities) ?? [];
-  const status = useAppSelector((state) => state.animal.pagination?.status);
-  
+    useAppSelector((state) => state.animal.animalist?.entities) ?? [];
+  const status = useAppSelector((state) => state.animal.animalist?.status);
+
+  // ← Statuts de chargement
+  const orgStatus = useAppSelector((state) => state.organizations.organizationList.status);
+  const farmStatus = useAppSelector((state) => state.farms.farmList.status);
+
+  const currentFarm = useAppSelector(selectCurrentFarm);
+  const farmId = currentFarm?.id ?? farms[0]?.id;
+
+  const allStoreAlerts: any[] = useAppSelector((state) => {
+    const raw = state.alerts.alerts;
+    return Array.isArray(raw) ? raw : [];
+  });
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedFarmId, setSelectedFarmId] = useState<string>("all");
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [activeTab, setActiveTab] = useState<TabType>("overview");
 
   const dispatch = useAppDispatch();
 
@@ -145,45 +165,65 @@ function MainDashboard() {
 
   // Configuration des onglets
   const tabs = [
-    { 
-      id: 'overview' as TabType, 
-      label: 'Vue d\'ensemble', 
+    {
+      id: "overview" as TabType,
+      label: "Vue d'ensemble",
       icon: LayoutDashboard,
-      badge: filteredAnimals.length
+      badge: filteredAnimals.length,
     },
-    { 
-      id: 'barns' as TabType, 
-      label: 'Bâtiments', 
+    {
+      id: "barns" as TabType,
+      label: "Bâtiments",
       icon: Home,
-      badge: null
+      badge: null,
     },
-    { 
-      id: 'lots' as TabType, 
-      label: 'Lots', 
+    {
+      id: "lots" as TabType,
+      label: "Lots",
       icon: Layers,
-      badge: null
+      badge: null,
     },
-    { 
-      id: 'pens' as TabType, 
-      label: 'Enclos', 
+    {
+      id: "pens" as TabType,
+      label: "Enclos",
       icon: Grid3x3,
-      badge: null
+      badge: null,
     },
-    { 
-      id: 'herds' as TabType, 
-      label: 'Troupeaux', 
+    {
+      id: "herds" as TabType,
+      label: "Troupeaux",
       icon: UsersIcon,
-      badge: null
+      badge: null,
     },
   ];
 
-  if (status === "pending" && allAnimals.length === 0)
-    return (
-      <div className="h-screen flex items-center justify-center">
-        Chargement...
-      </div>
-    );
-  
+  useEffect(() => {
+    if (farmId) dispatch(fetchAlertsByFarmId(farmId));
+  }, [farmId, dispatch]);
+
+  const dashboardAlerts = allStoreAlerts.filter((alert) => {
+    const lower = alert.title?.toLowerCase() ?? "";
+    const isSante =
+      lower.includes("malade") ||
+      lower.includes("santé") ||
+      lower.includes("décès") ||
+      lower.includes("mort");
+    return !isSante && alert.status === "active";
+  });
+
+// ← Chargez les données si elles ne sont pas encore là
+useEffect(() => {
+  if (orgStatus === LoadingType.IDLE) {
+    dispatch(fetchWithAuthOrganizations({ limit: 10 }));
+  }
+  if (farmStatus === LoadingType.IDLE) {
+    dispatch(getAllFarms({ limit: 10 }));
+  }
+}, [dispatch, orgStatus, farmStatus]);
+
+
+
+  // ── Garde 2 : chargement terminé — on décide maintenant ──
   if (
     organizations.length === 0 ||
     farms.length === 0 ||
@@ -191,8 +231,8 @@ function MainDashboard() {
   )
     return <EmptyDashboard />;
 
-  // Obtenir le farmId actuel pour les composants de gestion
-  const currentFarmId = selectedFarmId === "all" ? farms[0]?.id : Number(selectedFarmId);
+  const currentFarmId =
+    selectedFarmId === "all" ? farms[0]?.id : Number(selectedFarmId);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] pt-20">
@@ -222,7 +262,7 @@ function MainDashboard() {
             </div>
 
             <div className="flex gap-3">
-              {activeTab === 'overview' && (
+              {activeTab === "overview" && (
                 <>
                   <button
                     onClick={generatePDF}
@@ -246,7 +286,7 @@ function MainDashboard() {
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
-              
+
               return (
                 <button
                   key={tab.id}
@@ -254,19 +294,22 @@ function MainDashboard() {
                   className={`
                     flex items-center gap-2 px-6 py-3 font-medium text-sm whitespace-nowrap
                     border-b-2 transition-all relative
-                    ${isActive 
-                      ? 'border-vert text-vert bg-green-50' 
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    ${
+                      isActive
+                        ? "border-vert text-vert bg-green-50"
+                        : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"
                     }
                   `}
                 >
                   <Icon size={18} />
                   {tab.label}
                   {tab.badge !== null && (
-                    <span className={`
+                    <span
+                      className={`
                       ml-1 px-2 py-0.5 rounded-full text-xs font-bold
-                      ${isActive ? 'bg-vert text-white' : 'bg-gray-200 text-gray-600'}
-                    `}>
+                      ${isActive ? "bg-vert text-white" : "bg-gray-200 text-gray-600"}
+                    `}
+                    >
                       {tab.badge}
                     </span>
                   )}
@@ -280,8 +323,42 @@ function MainDashboard() {
       {/* Contenu selon l'onglet actif */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* ONGLET VUE D'ENSEMBLE */}
-        {activeTab === 'overview' && (
+        {activeTab === "overview" && (
           <>
+            {/* ── Alertes stock & équipements ── */}
+            {dashboardAlerts.length > 0 && (
+              <div className="mb-6 flex flex-col gap-2">
+                <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide flex items-center gap-2">
+                  <AlertTriangle size={14} className="text-yellow-500" />
+                  Alertes opérationnelles
+                </h3>
+                {dashboardAlerts.map((alert: any) => {
+                  const isStock = alert.title?.toLowerCase().includes("stock");
+                  const Icon = isStock ? Package : Wrench;
+                  const colors = isStock
+                    ? "bg-yellow-50 border-yellow-200 text-yellow-700"
+                    : "bg-purple-50 border-purple-200 text-purple-700";
+
+                  return (
+                    <div
+                      key={alert.id}
+                      className={`flex items-start gap-3 p-3 rounded-xl border ${colors}`}
+                    >
+                      <Icon size={16} className="shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold truncate">
+                          {alert.title}
+                        </p>
+                        <p className="text-xs opacity-75 truncate">
+                          {alert.message}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             {/* KPI Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <StatCard
@@ -343,7 +420,10 @@ function MainDashboard() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number | undefined) => [`${value ?? 0} tête(s)`, "Quantité"]}
+                      formatter={(value: number | undefined) => [
+                        `${value ?? 0} tête(s)`,
+                        "Quantité",
+                      ]}
                     />
                     <Legend verticalAlign="bottom" height={9} />
                   </PieChart>
@@ -352,7 +432,8 @@ function MainDashboard() {
 
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 h-[380px]">
                 <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center gap-2">
-                  <TrendingUp size={18} className="text-green-500" /> Enregistrements
+                  <TrendingUp size={18} className="text-green-500" />{" "}
+                  Enregistrements
                 </h3>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyData}>
@@ -366,11 +447,15 @@ function MainDashboard() {
                     <Tooltip cursor={{ fill: "#F8FAFC" }} />
                     <Bar
                       dataKey="total"
-                      fill="#16A34A"
+                      fill="#E3BA3E"
                       radius={[6, 6, 0, 0]}
                       barSize={30}
                     />
-                    <LabelList dataKey="total" position="top" style={{ fontSize: '12px', fill: '#64748b' }} />
+                    <LabelList
+                      dataKey="total"
+                      position="top"
+                      style={{ fontSize: "12px", fill: "#64748b" }}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -378,8 +463,10 @@ function MainDashboard() {
 
             {/* Table */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                <h3 className="text-lg font-bold text-gray-800">Derniers Animaux</h3>
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                <h3 className="text-md font-bold text-gray-800">
+                  Derniers Animaux
+                </h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
@@ -392,24 +479,31 @@ function MainDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {filteredAnimals.slice(0, 10).map((animal) => (
-                      <tr key={animal.id} className="hover:bg-gray-50 transition">
-                        <td className="px-6 py-4 font-bold text-darkText">
-                          {animal.name}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
-                          {animal.species?.name || "-"} / {animal.breed?.name || "-"}
-                        </td>
-                        <td className="px-6 py-4 text-sm font-semibold">
-                          {animal.weight} kg
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase tracking-tighter">
-                            {animal.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {[...filteredAnimals]
+                      .reverse()
+                      .slice(0, 3)
+                      .map((animal) => (
+                        <tr
+                          key={animal.id}
+                          className="hover:bg-gray-50 transition"
+                        >
+                          <td className="px-4 py-2 font-bold text-darkText">
+                            {animal.name}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600">
+                            {animal.species?.name || "-"} /{" "}
+                            {animal.breed?.name || "-"}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-semibold">
+                            {animal.weight} kg
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase tracking-tighter">
+                              {animal.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
@@ -418,16 +512,16 @@ function MainDashboard() {
         )}
 
         {/* ONGLET BÂTIMENTS */}
-        {activeTab === 'barns' && <BarnList farmId={currentFarmId} />}
+        {activeTab === "barns" && <BarnList farmId={currentFarmId} />}
 
         {/* ONGLET LOTS */}
-        {activeTab === 'lots' && <LotDashboard farmId={currentFarmId} />}
+        {activeTab === "lots" && <LotDashboard farmId={currentFarmId} />}
 
         {/* ONGLET ENCLOS */}
-        {activeTab === 'pens' && <PenList farmId={currentFarmId} />}
+        {activeTab === "pens" && <PenList farmId={currentFarmId} />}
 
         {/* ONGLET TROUPEAUX */}
-        {activeTab === 'herds' && <HerdList farmId={currentFarmId} />}
+        {activeTab === "herds" && <HerdList farmId={currentFarmId} />}
       </div>
 
       {/* Modal d'ajout d'animal */}
@@ -436,10 +530,7 @@ function MainDashboard() {
         onClose={() => setIsModalOpen(false)}
         title="Enregistrer un nouvel animal"
       >
-        <AnimalForm
-          farmId={currentFarmId}
-          onSuccess={handleAddSuccess}
-        />
+        <AnimalForm farmId={currentFarmId} onSuccess={handleAddSuccess} />
       </Modal>
     </div>
   );

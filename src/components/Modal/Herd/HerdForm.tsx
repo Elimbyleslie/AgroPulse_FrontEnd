@@ -152,7 +152,7 @@ const HerdForm: React.FC<HerdFormProps> = ({ farmId, herd, onSuccess }) => {
           <Button 
             type="submit" 
             disabled={isSubmitting} 
-            className="w-full bg-vert text-white py-3 rounded-xl mt-6 hover:bg-green-700 transition disabled:opacity-50"
+            className=" bg-vert text-white w-full  py-3 rounded-xl mt-6 hover:bg-green-700 transition disabled:opacity-50"
           >
             {isSubmitting ? 'Enregistrement...' : herd ? 'Modifier le troupeau' : 'Créer le troupeau'}
           </Button>

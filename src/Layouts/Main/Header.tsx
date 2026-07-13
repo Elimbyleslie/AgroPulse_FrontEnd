@@ -1,13 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/components/Topbar.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import logo from "../../assets/images/AgroPulse-1.png";
 import logo2 from "../../assets/images/agropulse.png";
 import Button from "../../components/UI/Button";
 import useLogout from "../../hooks/handleLogout";
 import { getUserInitials } from "../../lib/GetUserInitiales";
 import { selectAuthenticatedUser } from "../../store/auth/slice";
-import { useAppSelector } from "../../hooks/store";
+import { useAppSelector , useAppDispatch} from "../../hooks/store";
+import { fetchWithAuthOrganizations } from "../../store/organization/action";
+import { selectOrganizations } from "../../store/organization/slice";
+
 
 import { Link } from "react-router-dom";
 import {
@@ -27,13 +30,27 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-
+  const dispatch = useAppDispatch();
   const auth = useAppSelector(selectAuthenticatedUser);
   const user = auth.user;
 
-  // ✅ Extraction de l'organisation active pour l'affichage
-  const currentOrg =
-    user?.ownedOrganizations?.[0] || user?.memberOrganizations?.[0];
+  const organizations = useAppSelector(selectOrganizations);
+
+ useEffect(() => {
+    if (organizations.length === 0) {
+      dispatch(fetchWithAuthOrganizations({ limit: 10 }));
+    }
+  }, [dispatch, organizations.length]);
+
+  // ← Utilise le store au lieu de user.ownedOrganizations
+  const currentOrg = organizations[0]?.name ?? null;
+
+  const userRole =
+    typeof user?.roles?.[0] === "string"
+      ? user.roles[0]
+      : ((user?.roles?.[0] as any)?.role?.name ??
+        (user?.roles?.[0] as any)?.name ??
+        "Membre");
 
   const initials = getUserInitials({
     name: user?.name || "",
@@ -69,7 +86,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
             <div className="hidden lg:flex items-center gap-2 ml-4 pl-4 border-l border-gray-200 text-gray-600">
               <Building2 size={18} className="text-vert" />
               <span className="text-sm font-semibold truncate max-w-[180px]">
-                {currentOrg.name}
+                {currentOrg}
               </span>
             </div>
           )}
@@ -84,7 +101,9 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
               placeholder="Rechercher un animal, une tâche..."
               className="w-full px-3 py-2 outline-none text-sm placeholder:text-gray-400"
             />
-            <Button className="bg-vert text-xs py-1.5 h-8">Chercher</Button>
+            <Button className="bg-vert text-xs py-1.5 h-8 text-white  ">
+              Chercher
+            </Button>
           </div>
         </div>
 
@@ -108,9 +127,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
                   {user?.name || "Utilisateur"}
                 </span>
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
-                  {typeof user?.roles?.[0] === "string"
-                    ? user.roles[0]
-                    : (user?.roles?.[0] as any)?.role?.name || "Membre"}
+                  {userRole}
                 </span>
               </div>
 
@@ -138,7 +155,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
                       Organisation
                     </p>
                     <p className="text-sm font-semibold text-vert truncate">
-                      {currentOrg?.name || "Ma Ferme"}
+                      {currentOrg || "Ma Ferme"}
                     </p>
                   </div>
 

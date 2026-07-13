@@ -48,7 +48,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       <aside
         className={` 
           fixed lg:sticky top-16 left-0 
-          h-[calc(100vh-4rem)] w-64 
+          h-[calc(100vh-4rem)] w-72 
           bg-vert border-r  shadow-sm
           
           transform transition-transform duration-300 ease-in-out 
@@ -69,7 +69,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 {hasSubItems ? (
                   <button
                     onClick={() => toggleMenu(item.path)}
-                    className={`w-full flex items-center justify-between mt-3   text-white px-4 py-3 rounded-lg transition-all ${
+                    className={`w-full flex items-center justify-between mt-2   text-white px-4 py-3 rounded-lg transition-all ${
                       isActive
                         ? 'bg-darkVert text-white font-medium'
                         : 'text-white hover:bg-darkVert '
@@ -110,7 +110,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                           key={sub.path}
                           to={sub.path}
                           onClick={handleLinkClick}
-                          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all ${
+                          className={`flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-all ${
                             isSubMenuActive(sub.path)
                               ? 'bg-darkVert text-white font-medium'
                               : 'text-white hover:bg-darkVert  hover:text-white'

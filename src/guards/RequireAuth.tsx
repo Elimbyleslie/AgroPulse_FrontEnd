@@ -10,6 +10,7 @@ import {
 import { LoadingType } from "../models/store";
 import { PATH_AUTH } from "../constants/paths";
 import { Loader2 } from "lucide-react";
+import { AgroPulseStorage } from "./storage";
 
 const RequireAuth = () => {
   const location = useLocation();
@@ -17,6 +18,8 @@ const RequireAuth = () => {
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const authStatus = useAppSelector(selectAuthStatus);
   const user = useAppSelector(selectAuthenticatedUser);
+  const accessToken = AgroPulseStorage.getAccessToken(); // Vérification du token d'accès
+
   // 1️⃣ Chargement initial : On attend que Redux finisse ses appels API
   // (Très important pour le GoogleCallback et le rafraîchissement de page)
   if (authStatus === LoadingType.PENDING && !isAuthenticated) {
@@ -28,7 +31,10 @@ const RequireAuth = () => {
     );
   }
 
-  // 2️⃣ Non authentifié : Redirection vers le login
+  if (accessToken && authStatus === LoadingType.REJECTED) {
+    return <Navigate to={PATH_AUTH.LOGIN} state={{ from: location }} replace />;
+  }
+
   if (!isAuthenticated) {
     return <Navigate to={PATH_AUTH.LOGIN} state={{ from: location }} replace />;
   }

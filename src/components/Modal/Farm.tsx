@@ -1,4 +1,4 @@
-import { Home, MapPin, Ruler, Image } from "lucide-react";
+import { Home, MapPin, Ruler } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffect } from "react";
 import { Formik, Form, FormikHelpers } from "formik";
@@ -255,7 +255,7 @@ const managerId = authUser?.id || authUser?.id || AgroPulseStorage.getUser()?.us
             </div>
 
             {/* Photo URL */}
-            <div>
+            {/* <div>
               <label htmlFor="photo" className="block text-sm font-medium text-gray-700 mb-1.5">
                 <Image className="inline mr-1" size={16} />
                 URL de la photo
@@ -269,7 +269,7 @@ const managerId = authUser?.id || authUser?.id || AgroPulseStorage.getUser()?.us
               <p className="mt-1 text-xs text-gray-500">
                 Optionnel : Ajoutez une URL d'image de votre ferme
               </p>
-            </div>
+            </div> */}
 
             {/* Bouton de soumission */}
             <div className="flex gap-3 pt-4">

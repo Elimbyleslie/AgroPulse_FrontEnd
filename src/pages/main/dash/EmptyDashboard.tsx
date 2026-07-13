@@ -11,6 +11,7 @@ import AnimalForm from "../../../components/Modal/AnimalForm";
 import { toast } from "react-toastify";
 import { selectgetAllAnimals } from "../../../store/animal/slice";
 import { useNavigate } from "react-router-dom";
+import { selectAuthenticatedUser } from "../../../store/auth/slice";
 type ModalType = "organization" | "farm" | "animal" | null;
 
 interface StepConfig {
@@ -32,24 +33,25 @@ export default function EmptyDashboard() {
   const animals = animalState.entities ?? [];
   const [modal, setModal] = useState<ModalType>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const firstFarmId = farms[0]?.id;
+  const firstFarmId = farms.length > 0 ? farms[0].id : null;
   const navigate = useNavigate();
+const [isRedirecting, setIsRedirecting] = useState(false);
+
+const user = useAppSelector(selectAuthenticatedUser)
 
   useEffect(() => {
     const loadInitialData = async () => {
       try {
         // Étape A: Charger les structures de base
-        await Promise.all([
-          dispatch(fetchWithAuthOrganizations({ limit: 1 })),
-          dispatch(getAllFarms({ limit: 10 })),
-        ]);
+        await dispatch(fetchWithAuthOrganizations({ limit: 1 }));
+        const farmsResult = await dispatch(getAllFarms({ limit: 10 })).unwrap();
+        console.log("=== FARMS RESULT RAW ===", farmsResult);
       } catch (error) {
         console.error("Erreur chargement initial:", error);
       } finally {
         setIsLoading(false);
       }
     };
-
     loadInitialData();
   }, [dispatch]);
 
@@ -123,19 +125,27 @@ export default function EmptyDashboard() {
     setModal(stepId);
   };
 
-  useEffect(() => {
 
-  
-  if (!isLoading && allStepsCompleted) {
-    console.log("✅ Données détectées : Redirection vers le Dashboard");
-      const timer = setTimeout(() => {
-      navigate('/main/dashboard', { replace: true });
-    }, 1000); // 2 secondes de battement
-
-    return () => clearTimeout(timer);
+useEffect(() => {
+  if (user.user?.onboardingComplete === true && allStepsCompleted) {
+    setIsRedirecting(true);
+    navigate("/main/dashboard", { replace: true });
   }
 }, [isLoading, allStepsCompleted, navigate]);
 
+// Modifie le Loading State pour couvrir aussi la redirection
+if (isLoading || isRedirecting) {
+  return (
+    <div className="min-h-[calc(100vh-7rem)] flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto" />
+        <p className="mt-4 text-gray-600">
+          {isRedirecting ? "Redirection..." : "Chargement..."}
+        </p>
+      </div>
+    </div>
+  );
+}
 
   const steps: StepConfig[] = [
     {
@@ -161,62 +171,6 @@ export default function EmptyDashboard() {
     },
   ];
 
-  // Loading State
-  if (isLoading) {
-    return (
-      <div className="min-h-[calc(100vh-7rem)] flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto" />
-          <p className="mt-4 text-gray-600">Chargement...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Completion State
-  if (allStepsCompleted) {
-    return (
-      <div className="min-h-[calc(100vh-7rem)] flex flex-col items-center justify-center px-4 pt-20">
-        {/* <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center max-w-2xl bg-white rounded-2xl shadow-lg p-8"
-        >
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-4xl">🎉</span>
-          </div>
-
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Félicitations !
-          </h1>
-
-          <p className="text-gray-600 mb-6">Votre profil AgroPulse est prêt.</p>
-
-          <div className="space-y-2 text-left bg-gray-50 rounded-lg p-4">
-            <p className="flex items-center gap-2">
-              <span className="text-green-600">✅</span>
-              <span>{organizations.length} organisation(s)</span>
-            </p>
-            <p className="flex items-center gap-2">
-              <span className="text-green-600">✅</span>
-              <span>{farms.length} ferme(s)</span>
-            </p>
-            <p className="flex items-center gap-2">
-              <span className="text-green-600">✅</span>
-              <span>{animals.length} animal(aux)</span>
-            </p>
-          </div>
-
-          <button
-            onClick={() => (window.location.href = "/main/dashboard")}
-            className="mt-6 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-          >
-            Accéder au tableau de bord
-          </button>
-        </motion.div> */}
-      </div>
-    );
-  }
 
   // Setup Steps State
   return (

@@ -3,7 +3,7 @@ import { Formik, Form, FormikHelpers } from "formik";
 import * as Yup from "yup";
 import { Link, useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../../hooks/store";
-import { loginAction, sendEmailVerificationOtp } from "../../store/auth/action";
+import { loginAction } from "../../store/auth/action";
 import {
   clearAuthError,
   resetAuthStatus,
@@ -41,12 +41,14 @@ const Login: React.FC = () => {
   ) => {
     try {
       dispatch(clearAuthError());
-
       await dispatch(loginAction(values)).unwrap();
-
-      // ✅ Connexion réussie
       toast.success("Connexion réussie !");
-      navigate("/main/", { replace: true });
+      // verifier si l'user a fini le onboarding
+      if (values.onboardingComplete === false) {
+        navigate("/auth/onboarding", { replace: true });
+      } else {
+        navigate("/main", { replace: true });
+      }
     } catch (err: unknown) {
       const error = err as ApiError<{
         emailVerified?: boolean;
@@ -62,19 +64,6 @@ const Login: React.FC = () => {
         toast.warning(
           "Votre email n'est pas encore vérifié. Un code OTP a été renvoyé."
         );
-
-        try {
-          await dispatch(
-            sendEmailVerificationOtp({ email: error.error.email })
-          ).unwrap();
-          toast.info("Un nouveau code OTP a été envoyé à votre adresse email.");
-        } catch (otpErr) {
-          console.error("Erreur resend OTP", otpErr);
-          toast.error(
-            "Impossible de renvoyer le code OTP. Réessayez plus tard."
-          );
-        }
-
         navigate(PATH_AUTH.VERIFY_EMAIL_OTP, {
           replace: true,
           state: { email: error.error.email },

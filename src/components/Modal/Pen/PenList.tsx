@@ -9,7 +9,6 @@ import {
   Search, 
   X, 
   Loader2, 
-  Edit2,
   Users,
   Home
 } from 'lucide-react';
@@ -159,7 +158,6 @@ const PenList: React.FC<PenListProps> = ({ farmId }) => {
                       onClick={() => handleEdit(pen)}
                       className="flex-1 text-vert font-medium text-sm hover:bg-purple-50 py-2 rounded-lg transition flex items-center justify-center gap-2"
                     >
-                      <Edit2 size={16} />
                       Modifier
                     </Button>
                     <Button 

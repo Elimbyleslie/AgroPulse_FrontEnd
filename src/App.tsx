@@ -3,7 +3,8 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useEffect } from "react";
 import { useAppDispatch } from "./hooks/store";
-import { fetchCurrentUser } from "./store/auth/action";
+import { fetchCurrentUser, refreshToken } from "./store/auth/action";
+import { AgroPulseStorage } from "./guards/storage";
 
 import WelcomePagesLayout from "./Layouts/welcomePages/index";
 import Home from "./pages/welcomepages/Home";
@@ -21,197 +22,167 @@ import EmptyDashboard from "./pages/main/dash/EmptyDashboard";
 import NotFoundMain from "./pages/main/Errors/NotFound";
 import RequireAuth from "./guards/RequireAuth";
 import MainDashboard from "./pages/main/dash/Dashboard";
-
 import AnimalDetail from "./pages/main/animals/animalDetails";
 import AnimalTracking from "./pages/main/animals/suivieQRcode";
-import AnimalHistory from  "./pages/main/animals/animalHistory";
+import AnimalHistory from "./pages/main/animals/animalHistory";
+import ConsultationDashboard from "./pages/main/health/ConsultationDashboard";
+import VaccinationDashboard from "./pages/main/health/VaccinationDashboard";
+import AlertDashboard from "./pages/main/alerts";
+import ReproductionDashboard from "./pages/main/reproduction/cycleGestation";
+import FeedStockDashboard from "./pages/main/Alimentation/FeedStockDashboard";
+import FeedingPlanDashboard from "./pages/main/Alimentation/FeedingPlanDashboard";
+import BirthDashboard from "./pages/main/reproduction/BirthDashBoard";
+import GeneticPerformanceList from "./pages/main/reproduction/performance";
+import SalesPage from "./pages/main/gestionFinanciere/SalePage";
+import ExpensesPage from "./pages/main/gestionFinanciere/ExpensesPages";
+import ProfitLossPage from "./pages/main/gestionFinanciere/ProfitLossPage";
+import ProductionTableau from "./pages/main/production/ProductionDashBoard";
+import DailyProduction from "./pages/main/production/DailyProduction";
+import PerfomancePage from "./pages/main/production/PerfomancePage";
+import LotAnalysis from "./pages/main/production/LotAnalysis";
+import ProductionCurves from "./pages/main/production/ProductionCurves";
+import GroupAnimal from "./pages/main/animals/GroupAnimal";
+import ClientDashboard from "./pages/main/ClientDashboard";
+import InventoryGeneralDashboard from "./pages/main/stock&invintaire/InventoryGeneralDashboard";
+import PurchasesSuppliersDashboard from "./pages/main/stock&invintaire/PurchasesSupliersDashboard";
+import StockMovementsDashboard from "./pages/main/stock&invintaire/StockMovementsDashboard";
+import EquipmentMaintenanceDashboard from "./pages/main/stock&invintaire/EquipmentMaintenanceDashboard";
 
-import LotDashboard from "./pages/main/lotList";
 function App() {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
     const loadUser = async () => {
+      const accessToken = AgroPulseStorage.getAccessToken();
+      const refreshTok = AgroPulseStorage.getRefreshToken();
+
       try {
+        if (!accessToken && refreshTok) {
+          await dispatch(refreshToken()).unwrap();
+        }
         await dispatch(fetchCurrentUser()).unwrap();
-      } catch (error) {
-        console.error("Erreur lors du chargement de l'utilisateur:", error);
+      } catch {
+        // Session expirée — silencieux
       }
     };
 
     loadUser();
   }, [dispatch]);
 
+
+  
+
   return (
     <>
       <BrowserRouter>
         <Routes>
-          {/* ROUTES DU SITE D'ACCUEIL  */}
+          {/* ── SITE D'ACCUEIL ── */}
           <Route path="/" element={<WelcomePagesLayout />}>
-            <Route path="/" index element={<Navigate to={`home`} />} />
-            <Route path="/home" element={<Home />} />
-            <Route path="/tarif" element={<Tarif />} />
-            <Route path="/contact" element={<ContactUs />} />
+            <Route index element={<Navigate to="home" />} />
+            <Route path="home" element={<Home />} />
+            <Route path="tarif" element={<Tarif />} />
+            <Route path="contact" element={<ContactUs />} />
             <Route path="*" element={<NotFound />} />
           </Route>
 
-          {/* ROUTES D'AUTHENTIFICATION */}
+          {/* ── AUTHENTIFICATION ── */}
           <Route path="/auth" element={<AuthLayout />}>
-            <Route path="" element={<Navigate to={`/login`} />} />
-            <Route path="login" index element={<Login />} />
+            <Route index element={<Navigate to="/auth/login" />} />
+            <Route path="login" element={<Login />} />
             <Route path="register" element={<Register />} />
             <Route path="verify-email-otp" element={<EmailVerification />} />
             <Route path="google/callback" element={<GoogleCallback />} />
+            <Route path="onboarding" element={<EmptyDashboard />} />
           </Route>
 
-          {/* ROUTES PRINCIPALES PROTEGEE PAR L'AUTH */}
           <Route element={<RequireAuth />}>
             <Route path="/main" element={<MainLayout />}>
-              <Route index element={<Navigate to="onboarding" replace />} />
-              <Route path="onboarding" element={<EmptyDashboard />} />
+              <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<MainDashboard />} />
+
               <Route path="animals" element={<AnimalList />} />
               <Route path="animals/:id" element={<AnimalDetail />} />
               <Route path="animals/tracking" element={<AnimalTracking />} />
-              <Route path="animals/history" element={ <AnimalHistory /> } />
-              <Route path="lots" element={ <LotDashboard farmId={1} /> } />
+              <Route path="animals/groups" element={<GroupAnimal />} />
+              <Route path="animal/:id/history" element={<AnimalHistory />} />
+
+              <Route
+                path="health/consultations"
+                element={<ConsultationDashboard />}
+              />
+              <Route path="health/vaccins" element={<VaccinationDashboard />} />
+              <Route path="health/alerts" element={<AlertDashboard />} />
+
+              <Route
+                path="reproduction/cycles"
+                element={<ReproductionDashboard />}
+              />
+              <Route path="reproduction/births" element={<BirthDashboard />} />
+              <Route
+                path="reproduction/genetic"
+                element={<GeneticPerformanceList />}
+              />
+
+              <Route
+                path="feeding/feedstock"
+                element={<FeedStockDashboard />}
+              />
+              <Route
+                path="feeding/rations"
+                element={<FeedingPlanDashboard />}
+              />
+
+              <Route path="finance/sales" element={<SalesPage />} />
+              <Route path="finance/expenses" element={<ExpensesPage />} />
+              <Route path="finance/reports" element={<ProfitLossPage />} />
+              <Route path="finance/clients" element={<ClientDashboard />} />
+
+              <Route
+                path="production/dashboard"
+                element={<ProductionTableau />}
+              />
+              <Route path="production/daily" element={<DailyProduction />} />
+              <Route
+                path="production/performances"
+                element={<PerfomancePage />}
+              />
+              <Route path="production/lots" element={<LotAnalysis />} />
+              <Route path="production/curves" element={<ProductionCurves />} />
+
+              <Route
+                path="/main/inventory"
+                element={<InventoryGeneralDashboard />}
+              />
+              <Route
+                path="/main/inventory/purchases"
+                element={<PurchasesSuppliersDashboard />}
+              />
+              <Route
+                path="/main/inventory/movements"
+                element={<StockMovementsDashboard />}
+              />
+              <Route
+                path="/main/inventory/equipment"
+                element={<EquipmentMaintenanceDashboard />}
+              />
+
               <Route path="*" element={<NotFoundMain />} />
             </Route>
           </Route>
         </Routes>
       </BrowserRouter>
 
-      <ToastContainer position="top-left" />
+      <ToastContainer
+        position="top-right"
+        autoClose={2000}
+        hideProgressBar={true}
+        newestOnTop
+        closeOnClick
+        pauseOnHover
+        toastClassName="!rounded-xl !shadow-lg !text-sm !font-medium"
+      />
     </>
   );
 }
 
 export default App;
-
-// // src/App.tsx
-// import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-// import DashboardLayout from './layouts/DashboardLayout';
-
-// // Pages principales
-// import Dashboard from './pages/Dashboard';
-
-// // Pages Animaux
-// import AnimalList from './pages/animals/AnimalList';
-// import AnimalAdd from './pages/animals/AnimalAdd';
-// import AnimalRaces from './pages/animals/AnimalRaces';
-// import AnimalGroupes from './pages/animals/AnimalGroupes';
-
-// // Pages Santé & Reproduction
-// import Soins from './pages/sante/Soins';
-// import Vaccinations from './pages/sante/Vaccinations';
-// import Reproduction from './pages/sante/Reproduction';
-// import Gestations from './pages/sante/Gestations';
-// import Naissances from './pages/sante/Naissances';
-
-// // Pages Productions
-// import ProductionLait from './pages/productions/ProductionLait';
-// import ProductionViande from './pages/productions/ProductionViande';
-// import ProductionOeufs from './pages/productions/ProductionOeufs';
-// import ProductionHistorique from './pages/productions/ProductionHistorique';
-
-// // Pages Alimentations & Stocks
-// import Rations from './pages/alimentations/Rations';
-// import Stocks from './pages/alimentations/Stocks';
-// import Fournisseurs from './pages/alimentations/Fournisseurs';
-// import Commandes from './pages/alimentations/Commandes';
-
-// // Pages Rapports & Statistiques
-// import RapportsDashboard from './pages/rapports/RapportsDashboard';
-// import RapportsProductions from './pages/rapports/RapportsProductions';
-// import RapportsSante from './pages/rapports/RapportsSante';
-// import RapportsFinancier from './pages/rapports/RapportsFinancier';
-// import RapportsExports from './pages/rapports/RapportsExports';
-
-// // Pages Paramètres
-// import ParametresFerme from './pages/parametres/ParametresFerme';
-// import ParametresUtilisateurs from './pages/parametres/ParametresUtilisateurs';
-// import ParametresNotifications from './pages/parametres/ParametresNotifications';
-// import ParametresSysteme from './pages/parametres/ParametresSysteme';
-
-// // Autres pages
-// import Profile from './pages/Profile';
-// import Login from './pages/Login';
-// import NotFound from './pages/NotFound';
-
-// function App() {
-//   return (
-//     <BrowserRouter>
-//       <Routes>
-//         {/* Redirection racine vers dashboard */}
-//         <Route path="/" element={<Navigate to="/main" replace />} />
-
-//         {/* Route de connexion */}
-//         <Route path="/login" element={<Login />} />
-
-//         {/* Routes protégées du dashboard */}
-//         <Route path="/main" element={<DashboardLayout />}>
-//           {/* Dashboard principal */}
-//           <Route index element={<Dashboard />} />
-
-//           {/* Animaux */}
-//           <Route path="animal">
-//             <Route path="list" element={<AnimalList />} />
-//             <Route path="add" element={<AnimalAdd />} />
-//             <Route path="races" element={<AnimalRaces />} />
-//             <Route path="groupes" element={<AnimalGroupes />} />
-//           </Route>
-
-//           {/* Santé & Reproduction */}
-//           <Route path="sante-reproduction">
-//             <Route path="soins" element={<Soins />} />
-//             <Route path="vaccinations" element={<Vaccinations />} />
-//             <Route path="reproduction" element={<Reproduction />} />
-//             <Route path="gestations" element={<Gestations />} />
-//             <Route path="naissances" element={<Naissances />} />
-//           </Route>
-
-//           {/* Productions */}
-//           <Route path="productions">
-//             <Route path="lait" element={<ProductionLait />} />
-//             <Route path="viande" element={<ProductionViande />} />
-//             <Route path="oeufs" element={<ProductionOeufs />} />
-//             <Route path="historique" element={<ProductionHistorique />} />
-//           </Route>
-
-//           {/* Alimentations & Stocks */}
-//           <Route path="alimentations-stocks">
-//             <Route path="rations" element={<Rations />} />
-//             <Route path="stocks" element={<Stocks />} />
-//             <Route path="fournisseurs" element={<Fournisseurs />} />
-//             <Route path="commandes" element={<Commandes />} />
-//           </Route>
-
-//           {/* Rapports & Statistiques */}
-//           <Route path="rapports-statistiques">
-//             <Route path="dashboard" element={<RapportsDashboard />} />
-//             <Route path="productions" element={<RapportsProductions />} />
-//             <Route path="sante" element={<RapportsSante />} />
-//             <Route path="financier" element={<RapportsFinancier />} />
-//             <Route path="exports" element={<RapportsExports />} />
-//           </Route>
-
-//           {/* Paramètres */}
-//           <Route path="parametres">
-//             <Route path="ferme" element={<ParametresFerme />} />
-//             <Route path="utilisateurs" element={<ParametresUtilisateurs />} />
-//             <Route path="notifications" element={<ParametresNotifications />} />
-//             <Route path="systeme" element={<ParametresSysteme />} />
-//           </Route>
-
-//           {/* Autres pages */}
-//           <Route path="profile" element={<Profile />} />
-//         </Route>
-
-//         {/* Page 404 */}
-//         <Route path="*" element={<NotFound />} />
-//       </Routes>
-//     </BrowserRouter>
-//   );
-// }
-
-// export default App;

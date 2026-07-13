@@ -1,62 +1,50 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ApiError } from "../models/store";
 
 /**
- * Normalise TOUTES les erreurs fetch / backend / JS
- * vers un format unique :
- * {
- *   meta: { status, message },
- *   error?: any
- * }
+ * Normalise TOUTES les erreurs vers un format clair et exploitable
  */
 export default function extractApiError(err: unknown): ApiError {
-  // 🧱 Fallback absolu
   const fallback: ApiError = {
     meta: {
       status: 500,
-      message: "Erreur serveur",
+      message: "Une erreur inattendue est survenue",
     },
   };
 
   if (!err) return fallback;
 
-  /**
-   * ✅ CAS 1 — Erreur déjà normalisée (rejectWithValue(result))
-   */
-  if (
-    typeof err === "object" &&
-    err !== null &&
-    "meta" in err &&
-    typeof (err as ApiError).meta?.status === "number"
-  ) {
-    return err as ApiError;
-  }
+  // CAS 1 : Erreur déjà bien formatée (la plus courante avec rejectWithValue)
+  if (typeof err === "object" && err !== null) {
+    const errorObj = err as any;
 
-  /**
-   * ✅ CAS 2 — fetchApi a déjà retourné le body backend
-   * ex:
-   * {
-   *   meta: { status, message },
-   *   error: {...}
-   * }
-   */
-  if (
-    typeof err === "object" &&
-    err !== null &&
-    "status" in err &&
-    "message" in err
-  ) {
+    // Extraction du message depuis différents chemins possibles
+    const message =
+      errorObj.meta?.message ||
+      errorObj.message ||
+      errorObj.error?.message ||
+      errorObj.payload?.message ||
+      errorObj.payload?.meta?.message ||
+      errorObj.data?.message ||
+      "Erreur inconnue";
+
+    const status =
+      errorObj.meta?.status ||
+      errorObj.status ||
+      errorObj.payload?.status ||
+      errorObj.code ||
+      500;
+
     return {
       meta: {
-        status: (err as unknown as ApiError).meta.status,
-        message: (err as unknown as ApiError).meta.message,
+        status,
+        message: typeof message === "string" ? message : "Erreur serveur",
       },
-      error: (err as unknown as ApiError).error,
+      error: errorObj.error || errorObj.payload || null,
     };
   }
 
-  /**
-   * ✅ CAS 3 — Erreur réseau fetch (offline, CORS, timeout)
-   */
+  // CAS 2 : Erreur réseau / TypeError
   if (err instanceof TypeError) {
     return {
       meta: {
@@ -66,20 +54,15 @@ export default function extractApiError(err: unknown): ApiError {
     };
   }
 
-  /**
-   * ✅ CAS 4 — Erreur JS standard
-   */
+  // CAS 3 : Erreur JS standard
   if (err instanceof Error) {
     return {
       meta: {
         status: 500,
-        message: err.message || "Erreur interne",
+        message: err.message,
       },
     };
   }
 
-  /**
-   * 🧱 Dernier rempart
-   */
   return fallback;
 }

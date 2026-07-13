@@ -3,7 +3,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { Pen } from "../../models/pen";
 import { ApiError } from "../../models/store";
-import { RootState } from "../index";
+import { RootState } from "..";
 import {
   getAllPens,
   getPenById,

@@ -9,6 +9,9 @@ export interface User extends BaseEntity {
   phone?: string;
   photo?: string;
   emailVerified: boolean;
+  defaulFarmId?: number;
+  defaulOrganizationId?: number;
+  onboardingComplete?: boolean;
 }
 
 
@@ -25,11 +28,15 @@ export interface AuthUser {
   permissions: string[];
    ownedOrganizations?: organizationRes[];  // Ajouté
   memberOrganizations?: organizationRes[]; // Ajouté
+  defaulFarmId?: number;
+  defaulOrganizationId?: number;
+  onboardingComplete?: boolean;
 } 
 
 export interface UserLoginForm {
   email: string;
   password: string;
+  onboardingComplete?: boolean;
 }
 
 export interface UserRegisterForm {
@@ -40,6 +47,8 @@ export interface UserRegisterForm {
   passwordConfirmation: string;
   phone?: string;
   photo?: string;
+  defaulFarmId?: number;
+  defaulOrganizationId?: number;
 }
 
 export interface UpdatePasswordForm {

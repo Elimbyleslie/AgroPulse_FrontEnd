@@ -6,21 +6,25 @@ import {
   createAnimal,
   updateAnimal,
   deleteAnimal,
+  unassignAnimal,
+  assignAnimal,
 } from "./action";
 import { Animal } from "../../models/animal";
 import { RootState } from "..";
 
 export interface AnimalState {
-  pagination: AsyncState<Animal[]>;
+  animalist: AsyncState<Animal[] | null>;
   selectedAnimal: AsyncState<Animal | null>;
   createAnimal: AsyncState<Animal | null>;
   updateAnimal: AsyncState<Animal | null>;
   deleteAnimal: AsyncState<Animal | null>;
+  assignAnimal: AsyncState<Animal | null>;
+  unassignAnimal: AsyncState<Animal | null>;
 }
 
 const initialState: AnimalState = {
-  pagination: {
-    entities: [],
+  animalist: {
+    entities: null,
     status: LoadingType.IDLE,
     error: null,
   },
@@ -44,6 +48,16 @@ const initialState: AnimalState = {
     error: null,
     status: LoadingType.IDLE,
   },
+  assignAnimal: {
+    entities: null,
+    status: LoadingType.IDLE,
+    error: null,
+  },
+  unassignAnimal: {
+    entities: null,
+    status: LoadingType.IDLE,
+    error: null,
+  },
 };
 
 export const AnimalSlice = createSlice({
@@ -58,18 +72,18 @@ export const AnimalSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(getAllAnimals.pending, (state) => {
-        state.pagination.status = LoadingType.PENDING;
-        state.pagination.error = null;
+        state.animalist.status = LoadingType.PENDING;
+        state.animalist.error = null;
       })
       .addCase(getAllAnimals.fulfilled, (state, { payload }) => {
-        state.pagination.status = LoadingType.SUCCESS;
-        state.pagination.error = null;
-        state.pagination.entities = payload.data.animals;
-        state.pagination.pagination = payload.data.pagination;
+        state.animalist.status = LoadingType.SUCCESS;
+        state.animalist.error = null;
+        state.animalist.entities = payload.data.animals;
+        state.animalist.pagination = payload.data.pagination;
       })
       .addCase(getAllAnimals.rejected, (state, { payload }) => {
-        state.pagination.status = LoadingType.REJECTED;
-        state.pagination.error = typeof payload === "string" ? payload : JSON.stringify(payload);
+        state.animalist.status = LoadingType.REJECTED;
+        state.animalist.error = typeof payload === "string" ? payload : JSON.stringify(payload);
       });
 
     builder
@@ -131,13 +145,42 @@ export const AnimalSlice = createSlice({
         state.deleteAnimal.status = LoadingType.REJECTED;
         state.deleteAnimal.error = payload;
       });
+
+    builder
+      .addCase(unassignAnimal.pending, (state) => {
+        state.updateAnimal.status = LoadingType.PENDING;
+        state.updateAnimal.error = null;
+      })
+      .addCase(unassignAnimal.fulfilled, (state, { payload }) => {
+        state.updateAnimal.status = LoadingType.SUCCESS;
+        state.updateAnimal.error = null;
+        state.updateAnimal.entities = payload.data;
+      })
+      .addCase(unassignAnimal.rejected, (state, { payload }) => {
+        state.updateAnimal.status = LoadingType.REJECTED;
+        state.updateAnimal.error = typeof payload === "string" ? payload : JSON.stringify(payload);
+      });
+    builder
+      .addCase(assignAnimal.pending, (state) => {
+        state.updateAnimal.status = LoadingType.PENDING;
+        state.updateAnimal.error = null;
+      } )
+      .addCase(assignAnimal.fulfilled, (state, { payload }) => {
+        state.updateAnimal.status = LoadingType.SUCCESS;
+        state.updateAnimal.error = null;
+        state.updateAnimal.entities = payload.data;
+      })
+      .addCase(assignAnimal.rejected, (state, { payload }) => {
+        state.updateAnimal.status = LoadingType.REJECTED;
+        state.updateAnimal.error = typeof payload === "string" ? payload : JSON.stringify(payload);
+      });
   },
 });
 
 export const { resetAnimalStatus } = AnimalSlice.actions;
 
 export const selectgetAllAnimals = (state: RootState) =>
-  state.animal.pagination;
+  state.animal.animalist;
 export const selectgetAnimalById = (state: RootState) =>
   state.animal.selectedAnimal;
 export const selectcreateAnimal = (state: RootState) =>
@@ -148,5 +191,6 @@ export const selectdeleteAnimal = (state: RootState) =>
   state.animal.deleteAnimal;
 export const selectAnimalQRCode = ( state:RootState) =>
 state.animal.createAnimal.entities?.qrcode;
+
 
 export default AnimalSlice;

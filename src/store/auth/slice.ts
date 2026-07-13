@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   loginAction,
   register,
@@ -11,7 +12,7 @@ import {
   changePassword,
   verifyEmailOTP,
   getMe,
-  fetchCurrentUser
+  fetchCurrentUser,
 } from "./action";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { AuthUser } from "../../models/user";
@@ -19,17 +20,23 @@ import { LoadingType, ApiError } from "../../models/store";
 import { RootState } from "..";
 import { AgroPulseStorage } from "../../guards/storage";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const transformUserData = (data: any): any => {
+const transformUserData = (data: any): { user: any; token: any } | any => {
   if (!data) return null;
-  const user = data.user || data;
-  const token = data.token || null;
 
-  const normalizedUser = {
-    ...user,
-    id: user.id_user || user.id || user.uid,
+  // Cas : { user: {...}, token: {...} }
+  if (data.user && data.token) {
+    const user = {
+      ...data.user,
+      id: data.user.id_user || data.user.id || data.user.uid,
+    };
+    return { user, token: data.token };
+  }
+
+  // Cas : user seul (getMe, fetchCurrentUser)
+  return {
+    ...data,
+    id: data.id_user || data.id || data.uid,
   };
-  return token ? { user: normalizedUser, token } : normalizedUser;
 };
 
 type AuthState = {
@@ -44,7 +51,7 @@ type AuthState = {
 const initialState: AuthState = {
   auth: {
     status: LoadingType.IDLE,
-    user: transformUserData(AgroPulseStorage.getUser()),
+    user:  AgroPulseStorage.getUser(),   
     token: AgroPulseStorage.getAccessToken(),
     error: null,
   },
@@ -62,13 +69,13 @@ const AuthSlice = createSlice({
     setUserSession: (
       state,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      action: PayloadAction<{ token: string; user?: any }>
+      action: PayloadAction<{ token: string; user?: any }>,
     ) => {
       state.auth.token = action.payload.token;
       AgroPulseStorage.setAccessToken(action.payload.token);
 
       if (action.payload.user) {
-        const transformedUser = transformUserData(action.payload.user); 
+        const transformedUser = transformUserData(action.payload.user);
         state.auth.user = transformedUser;
         AgroPulseStorage.setUser(transformedUser);
       }
@@ -101,14 +108,15 @@ const AuthSlice = createSlice({
       })
       .addCase(loginAction.fulfilled, (state, { payload }) => {
         state.auth.status = LoadingType.SUCCESS;
-        const transformedData = transformUserData(payload.data);
-        state.auth.user = transformedData;
-        state.auth.token = transformedData.token.accessToken;
-        AgroPulseStorage.setUser(transformedData);
-        AgroPulseStorage.setAccessToken(transformedData.token.accessToken);
-        AgroPulseStorage.setRefreshToken(transformedData.token.refreshToken);
-        AgroPulseStorage.setUser(transformedData);
+        const transformed = transformUserData(payload.data);
 
+        // ✅ user et token clairement séparés
+        state.auth.user = transformed.user;
+        state.auth.token = transformed.token.accessToken;
+
+        AgroPulseStorage.setUser(transformed.user);
+        AgroPulseStorage.setAccessToken(transformed.token.accessToken);
+        AgroPulseStorage.setRefreshToken(transformed.token.refreshToken);
         state.auth.error = null;
       })
       .addCase(loginAction.rejected, (state, { payload }) => {
@@ -127,16 +135,13 @@ const AuthSlice = createSlice({
       })
       .addCase(register.fulfilled, (state, { payload }) => {
         state.auth.status = LoadingType.SUCCESS;
+        const transformed = transformUserData(payload.data);
+        state.auth.user = transformed.user;
+        state.auth.token = transformed.token.accessToken;
+        AgroPulseStorage.setUser(transformed.user);
+        AgroPulseStorage.setAccessToken(transformed.token.accessToken);
+        AgroPulseStorage.setRefreshToken(transformed.token.refreshToken);
         state.auth.error = null;
-
-        // ✅ TRANSFORMER les données
-        const transformedData = transformUserData(payload.data);
-        state.auth.user = transformedData;
-        state.auth.token = transformedData.token.accessToken;
-
-        AgroPulseStorage.setAccessToken(transformedData.token.accessToken);
-        AgroPulseStorage.setRefreshToken(transformedData.token.refreshToken);
-        AgroPulseStorage.setUser(transformedData);
       })
       .addCase(register.rejected, (state, { payload }) => {
         state.auth.status = LoadingType.REJECTED;
@@ -166,16 +171,12 @@ const AuthSlice = createSlice({
       })
       .addCase(verifyOtp.fulfilled, (state, { payload }) => {
         state.auth.status = LoadingType.SUCCESS;
-
-        // ✅ TRANSFORMER les données
-        const transformedData = transformUserData(payload.data);
-        state.auth.user = transformedData;
-        state.auth.token = transformedData.token.accessToken;
-
-        AgroPulseStorage.setAccessToken(transformedData.token.accessToken);
-        AgroPulseStorage.setRefreshToken(transformedData.token.refreshToken);
-        AgroPulseStorage.setUser(transformedData);
-
+        const transformed = transformUserData(payload.data);
+        state.auth.user = transformed.user;
+        state.auth.token = transformed.token.accessToken;
+        AgroPulseStorage.setUser(transformed.user);
+        AgroPulseStorage.setAccessToken(transformed.token.accessToken);
+        AgroPulseStorage.setRefreshToken(transformed.token.refreshToken);
         state.auth.error = null;
       })
       .addCase(verifyOtp.rejected, (state, { payload }) => {
@@ -339,7 +340,7 @@ const AuthSlice = createSlice({
       .addCase(fetchCurrentUser.rejected, (state, { payload }) => {
         state.auth.status = LoadingType.REJECTED;
         state.auth.error = payload as ApiError;
-      });  
+      });
   },
 });
 
@@ -369,6 +370,7 @@ export const selectUserId = (state: RootState) =>
 export const selectManagerId = selectUserId;
 
 export const selectCurrentUser = (state: RootState) =>
-  state.authentification.auth.user?.ownedOrganizations  ||  state.authentification.auth.user?.memberOrganizations;
+  state.authentification.auth.user?.ownedOrganizations ||
+  state.authentification.auth.user?.memberOrganizations;
 
 export default AuthSlice;

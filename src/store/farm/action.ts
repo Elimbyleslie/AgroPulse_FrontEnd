@@ -16,7 +16,7 @@ import {
 import { ApiResponse } from '../../models/store'
 
 type FarmListData = {
-  farms: Farm[];
+  farms: Farm;
   pagination: FarmPagination;
 };
 
@@ -26,7 +26,7 @@ export const createFarm = createAsyncThunk<
   ThunkApi             
 >("farm/create", async (data, apiThunk) => {
   try {
-    const result: BackendFarmResponse<Farm> = await fetchWithAuth(
+    const result = await fetchWithAuth(
       ROUTES.FARM_CREATE,
       {
         method: "POST",
@@ -73,7 +73,7 @@ export const updateFarm = createAsyncThunk<
   try {
     const { id, ...updateData } = data;
     
-    const result: BackendFarmResponse<Farm> = await fetchWithAuth(
+    const result = await fetchWithAuth(
       `${ROUTES.FARM_UPDATE}/${id}`,
       {
         method: "PUT",
@@ -149,7 +149,7 @@ export const getFarmById = createAsyncThunk<
   ThunkApi
 >("farm/get", async (id, apiThunk) => {
   try {
-    const result: BackendFarmResponse<Farm> = await fetchWithAuth(
+    const result = await fetchWithAuth(
       `${ROUTES.FARM_GET_BY_ID}/${id}`
     );
 
@@ -183,7 +183,7 @@ export const deleteFarm = createAsyncThunk<
   ThunkApi
 >("farm/delete", async (id, apiThunk) => {
   try {
-    const result: BackendFarmResponse<null> = await fetchWithAuth(
+    const result = await fetchWithAuth(
       `${ROUTES.FARM_DELETE}/${id}`,
       { method: "DELETE" }
     );
@@ -203,7 +203,7 @@ export const deleteFarm = createAsyncThunk<
 });
 
 export const getUserFarms = createAsyncThunk<
-  ApiResponse<Farm[]>,
+  ApiResponse<Farm>,
   void
 >(
   "farms/getUserFarms",
