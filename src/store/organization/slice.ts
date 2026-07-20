@@ -116,5 +116,5 @@ export const { resetOrganizationStatus, clearCurrentOrganization } = Organizatio
 export const selectOrganizations = (state: RootState) => state.organizations.organizationList.entities;
 export const selectOrganizationsStatus = (state: RootState) => state.organizations.organizationList.status;
 export const selectCreateOrganizationStatus = (state: RootState) => state.organizations.createOrganization.status;
-
+export const selectCurrentOrganization = (state: RootState) => state.organizations.currentOrganization.entity;
 export default OrganizationSlice;

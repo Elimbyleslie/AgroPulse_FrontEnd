@@ -23,6 +23,7 @@ import  supplierSlice from "./achats&fournisseur/slice";
 import equipmentSlice from "./equipments/slice";
 import purchaseSlice from "./achats&fournisseur/purchaseSlice";
 import feedStockSlice from "./alimentations/sliceStock";
+import subscriptionSlice from "./Abonnement&Facturation/slice";
 
 
 const rootReducer = combineReducers({   
@@ -50,6 +51,7 @@ const rootReducer = combineReducers({
   [equipmentSlice.name]: equipmentSlice.reducer,
   [purchaseSlice.name]: purchaseSlice.reducer,
   [feedStockSlice.name]: feedStockSlice.reducer,
+  [subscriptionSlice.name]: subscriptionSlice.reducer,
 });
 
 export const store = configureStore({

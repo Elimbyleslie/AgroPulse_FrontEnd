@@ -77,7 +77,7 @@ const statusConfig: Record<
 > = {
   OPERATIONAL: {
     label: "Opérationnel",
-    cls: "bg-emerald-50 text-vert border border-emerald-200",
+    cls: "bg-emerald-50 text-jaune border border-emerald-200",
     icon: <CheckCircle2 className="w-3.5 h-3.5" />,
   },
   UNDER_MAINTENANCE: {
@@ -234,7 +234,7 @@ const EquipmentFormModal: React.FC<{
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
-              <Settings className="w-4 h-4 text-vert" />
+              <Settings className="w-4 h-4 text-jaune" />
             </div>
             <div>
               <h2 className="font-bold text-gray-900 text-sm">
@@ -310,7 +310,7 @@ const EquipmentFormModal: React.FC<{
                   key={key}
                   type="button"
                   onClick={() => set("status", key)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1 ${form.status === key ? "bg-white text-vert shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1 ${form.status === key ? "bg-white text-jaune shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
                 >
                   {cfg.icon} {cfg.label}
                 </button>
@@ -344,7 +344,7 @@ const EquipmentFormModal: React.FC<{
           <button
             onClick={handleSubmit}
             disabled={saving || !form.name}
-            className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-vert text-white disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-dark_vert transition shadow-sm shadow-emerald-200"
+            className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-jaune text-white disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-dark_jaune transition shadow-sm shadow-emerald-200"
           >
             {saving ? (
               <>
@@ -429,8 +429,8 @@ const MaintenanceFormModal: React.FC<{
       >
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
-              <Wrench className="w-4 h-4 text-vert" />
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Wrench className="w-4 h-4 text-bleu" />
             </div>
             <h2 className="font-bold text-gray-900 text-sm">
               {initial ? "Modifier la maintenance" : "Nouvelle maintenance"}
@@ -454,6 +454,12 @@ const MaintenanceFormModal: React.FC<{
               options={equipmentOptions}
               placeholder="— choisir un équipement —"
             />
+            {equipmentOptions.length === 0 && (
+              <p className="text-[10px] text-orange-500 font-semibold mt-1.5">
+                Aucun équipement enregistré. Créez-en un dans l'onglet
+                Équipements.
+              </p>
+            )}
           </div>
           <div>
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
@@ -516,7 +522,7 @@ const MaintenanceFormModal: React.FC<{
           <button
             onClick={handleSubmit}
             disabled={saving || !form.equipmentId || !form.name}
-            className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-vert text-white disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-dark_vert transition shadow-sm shadow-emerald-200"
+            className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-bleu text-white disabled:opacity-50 flex items-center justify-center gap-2 hover:opacity-90 transition shadow-sm shadow-blue-200"
           >
             {saving ? (
               <>
@@ -704,7 +710,11 @@ const EquipmentMaintenanceDashboard: React.FC = () => {
                   ? (setEditingEquip(null), setShowEquipForm(true))
                   : (setEditingMaint(null), setShowMaintForm(true))
               }
-              className="flex items-center gap-2 px-4 py-2.5 bg-vert text-white rounded-xl font-semibold text-sm hover:bg-dark_vert transition shadow-sm shadow-emerald-200"
+              className={`flex items-center gap-2 px-4 py-2.5 text-white rounded-xl font-semibold text-sm transition shadow-sm ${
+                activeTab === "equipment"
+                  ? "bg-jaune hover:bg-dark_jaune shadow-emerald-200"
+                  : "bg-bleu hover:opacity-90 shadow-blue-200"
+              }`}
             >
               <Plus className="w-4 h-4" />{" "}
               {activeTab === "equipment"
@@ -719,7 +729,7 @@ const EquipmentMaintenanceDashboard: React.FC = () => {
             label="Total équipements"
             value={equipments.length}
             sub="enregistrés"
-            icon={<Settings className="w-5 h-5 text-vert" />}
+            icon={<Settings className="w-5 h-5 text-jaune" />}
             bg="bg-emerald-50"
           />
           <StatCard
@@ -745,20 +755,47 @@ const EquipmentMaintenanceDashboard: React.FC = () => {
           />
         </div>
 
-        <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1 w-fit">
-          {(["equipment", "maintenance"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => {
-                setActiveTab(tab);
-                setSearchTerm("");
-                setPage(1);
-              }}
-              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition ${activeTab === tab ? "bg-vert text-white" : "text-gray-500 hover:text-gray-700"}`}
-            >
-              {tab === "equipment" ? "Équipements" : "Historique maintenance"}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-2xl p-1.5 w-full sm:w-fit shadow-sm">
+          {(["equipment", "maintenance"] as const).map((tab) => {
+            const isActive = activeTab === tab;
+            const activeBg = tab === "equipment" ? "bg-jaune" : "bg-bleu";
+            return (
+              <button
+                key={tab}
+                onClick={() => {
+                  setActiveTab(tab);
+                  setSearchTerm("");
+                  setPage(1);
+                }}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition ${
+                  isActive
+                    ? `${activeBg} text-white shadow-sm`
+                    : "text-gray-500 hover:bg-gray-100"
+                }`}
+              >
+                {tab === "equipment" ? (
+                  <Settings className="w-4 h-4" />
+                ) : (
+                  <Wrench className="w-4 h-4" />
+                )}
+                {tab === "equipment" ? "Équipements" : "Historique maintenance"}
+                {tab === "equipment" && equipments.length > 0 && (
+                  <span
+                    className={`text-[10px] px-1.5 rounded-full ${isActive ? "bg-white/20" : "bg-gray-100"}`}
+                  >
+                    {equipments.length}
+                  </span>
+                )}
+                {tab === "maintenance" && maintenances.length > 0 && (
+                  <span
+                    className={`text-[10px] px-1.5 rounded-full ${isActive ? "bg-white/20" : "bg-gray-100"}`}
+                  >
+                    {maintenances.length}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -815,7 +852,7 @@ const EquipmentMaintenanceDashboard: React.FC = () => {
                   setEditingEquip(null);
                   setShowEquipForm(true);
                 }}
-                className="mt-2 flex items-center gap-2 px-4 py-2 bg-emerald-50 text-vert rounded-xl text-sm font-semibold hover:bg-emerald-100 transition"
+                className="mt-2 flex items-center gap-2 px-4 py-2 bg-emerald-50 text-jaune rounded-xl text-sm font-semibold hover:bg-emerald-100 transition"
               >
                 <Plus className="w-4 h-4" /> Nouvel équipement
               </button>
@@ -832,7 +869,7 @@ const EquipmentMaintenanceDashboard: React.FC = () => {
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-                          <Settings className="w-5 h-5 text-vert" />
+                          <Settings className="w-5 h-5 text-jaune" />
                         </div>
                         <div>
                           <p className="font-bold text-gray-900 text-sm">
@@ -904,7 +941,7 @@ const EquipmentMaintenanceDashboard: React.FC = () => {
                 setEditingMaint(null);
                 setShowMaintForm(true);
               }}
-              className="mt-2 flex items-center gap-2 px-4 py-2 bg-emerald-50 text-vert rounded-xl text-sm font-semibold hover:bg-emerald-100 transition"
+              className="mt-2 flex items-center gap-2 px-4 py-2 bg-blue-50 text-bleu rounded-xl text-sm font-semibold hover:bg-blue-100 transition"
             >
               <Plus className="w-4 h-4" /> Nouvelle maintenance
             </button>
@@ -1001,7 +1038,7 @@ const EquipmentMaintenanceDashboard: React.FC = () => {
                     <button
                       key={pg}
                       onClick={() => setPage(pg)}
-                      className={`w-7 h-7 rounded-lg text-xs font-semibold transition ${pg === page ? "bg-vert text-white" : "hover:bg-gray-200 text-gray-600"}`}
+                      className={`w-7 h-7 rounded-lg text-xs font-semibold transition ${pg === page ? "bg-bleu text-white" : "hover:bg-gray-200 text-gray-600"}`}
                     >
                       {pg}
                     </button>

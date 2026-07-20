@@ -47,7 +47,7 @@ import InventoryGeneralDashboard from "./pages/main/stock&invintaire/InventoryGe
 import PurchasesSuppliersDashboard from "./pages/main/stock&invintaire/PurchasesSupliersDashboard";
 import StockMovementsDashboard from "./pages/main/stock&invintaire/StockMovementsDashboard";
 import EquipmentMaintenanceDashboard from "./pages/main/stock&invintaire/EquipmentMaintenanceDashboard";
-
+import MonAbonnementDashboard from './pages/main/Abonnement&Facturation/MonAbonnement'
 function App() {
   const dispatch = useAppDispatch();
 
@@ -166,6 +166,10 @@ function App() {
                 element={<EquipmentMaintenanceDashboard />}
               />
 
+              <Route
+              path="/main/subscription"
+              element={<MonAbonnementDashboard />}
+              />
               <Route path="*" element={<NotFoundMain />} />
             </Route>
           </Route>
