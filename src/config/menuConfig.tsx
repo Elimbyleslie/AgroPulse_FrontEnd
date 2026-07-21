@@ -7,7 +7,6 @@ import {
   TrendingUp, 
   Wallet, 
   Package, 
-  Receipt,
   Bell, 
   ShoppingBag,
   Settings,
@@ -118,13 +117,12 @@ export const menuItems: MenuItem[] = [
   },
 
   {
-    label: "Abonnement & Facturation",
+    label: "Abonnement ",
     path: "/main/subscription",
     icon: DollarSign,
     subItems: [
       { label: "Mon Abonnement", path: "/main/subscription", icon: TrendingUp },
       { label: "Historique des Paiements", path: "/main/subscription/payments", icon: DollarSign },
-      { label: "Factures", path: "/main/subscription/invoices", icon: Receipt },
       { label: "Gestion des Offres", path: "/main/subscription/plans", icon: Package }, // Admin only
     ],
   },

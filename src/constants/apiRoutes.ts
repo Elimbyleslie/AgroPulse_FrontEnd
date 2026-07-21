@@ -396,6 +396,7 @@ UPDATE_INVOICES: (id: string | number) => `invoices/${id}`,
 DELETE_INVOICES: (id: string | number) => `invoices/${id}`,
 GET_INVOICES_BY_ID: "invoices",
 
+
 LIST_PAYMENTS: "payments",
 CREATE_PAYMENTS: "payments",
 UPDATE_PAYMENTS: (id: string | number) => `payments/${id}`,
