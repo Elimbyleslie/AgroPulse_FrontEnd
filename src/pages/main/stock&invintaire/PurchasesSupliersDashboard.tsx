@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import{ SupplierCategory } from "../../../models/achats&fournisseur";
+import { SupplierCategory } from "../../../models/achats&fournisseur";
 
 import {
   fetchPurchases,
@@ -76,35 +76,28 @@ const fmtDate = (d?: string | Date) =>
 const fmtNum = (n?: number | null, dec = 0) =>
   n != null ? Number(n).toFixed(dec).replace(".", ",") : "—";
 
+// Statuts alignés sur l'enum backend Prisma : PENDING | RECEIVED | CANCELLED
 const statusConfig: Record<string, { label: string; cls: string }> = {
   PENDING: {
     label: "En attente",
-    cls: "bg-amber-50 text-amber-600 border border-amber-200",
+    cls: "bg-[#E3BA3E]/10 text-jaune border border-[#E3BA3E]/30",
   },
-  SUCCESS: {
-    label: "Payé",
+  RECEIVED: {
+    label: "Reçu",
     cls: "bg-emerald-50 text-vert border border-emerald-200",
-  },
-  FAILED: {
-    label: "Échoué",
-    cls: "bg-red-50 text-rouge border border-red-200",
   },
   CANCELLED: {
     label: "Annulé",
     cls: "bg-gray-100 text-gray-500 border border-gray-200",
   },
-  REFUNDED: {
-    label: "Remboursé",
-    cls: "bg-blue-50 text-bleu border border-blue-200",
-  },
 };
 
 const categoryLabels: Record<string, string> = {
-   FEED : "alimentation",
-  MEDICAL :"medecine",
-  EQUIPMENT : "equipement",
-  SERVICE : "service",
-  OTHER : "autre",
+  FEED: "alimentation",
+  MEDICAL: "medecine",
+  EQUIPMENT: "equipement",
+  SERVICE: "service",
+  OTHER: "autre",
 };
 
 const StatCard: React.FC<{
@@ -160,7 +153,7 @@ const DeleteModal: React.FC<{
         <button
           onClick={onConfirm}
           disabled={isDeleting}
-          className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-rouge text-white hover:bg-red-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
+          className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-rouge text-white hover:opacity-90 transition disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {isDeleting ? (
             <>
@@ -185,18 +178,18 @@ const SupplierFormModal: React.FC<{
   const currentFarm = useAppSelector(selectCurrentFarm);
   const [saving, setSaving] = useState(false);
 
- const [form, setForm] = useState({
+  const [form, setForm] = useState({
     name: initial?.name || "",
-    category: initial?.category || SupplierCategory.FEED,  
+    category: initial?.category || SupplierCategory.FEED,
     email: initial?.email || "",
     phone: initial?.phone || "",
     farmId: currentFarm?.id || undefined,
   });
-const set = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }));
+  const set = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }));
   const inputClass =
-    "w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent text-sm transition";
+    "w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-bleu/40 focus:border-transparent text-sm transition";
 
-const handleSubmit = async () => {
+  const handleSubmit = async () => {
     if (!form.name?.trim() || !form.category) {
       toast.error("Le nom et la catégorie sont obligatoires");
       return;
@@ -213,16 +206,16 @@ const handleSubmit = async () => {
       // Payload explicite et propre
       const payload: Supplier & { farmId: number } = {
         name: form.name.trim(),
-        category: form.category as SupplierCategory,   // Cast explicite
+        category: form.category as SupplierCategory, // Cast explicite
         email: form.email?.trim() || null,
         phone: form.phone?.trim() || null,
         farmId: currentFarm.id,
       };
 
-      console.log("📤 Payload final envoyé :", payload);
-
       if (initial?.id) {
-        await dispatch(updateSupplier({ id: initial.id, data: payload })).unwrap();
+        await dispatch(
+          updateSupplier({ id: initial.id, data: payload }),
+        ).unwrap();
         toast.success("Fournisseur mis à jour avec succès");
       } else {
         await dispatch(createSupplier(payload)).unwrap();
@@ -248,8 +241,8 @@ const handleSubmit = async () => {
       >
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
-              <Building2 className="w-4 h-4 text-vert" />
+            <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+              <Building2 className="w-4 h-4 text-bleu" />
             </div>
             <h2 className="font-bold text-gray-900 text-sm">
               {initial ? "Modifier le fournisseur" : "Nouveau fournisseur"}
@@ -265,7 +258,7 @@ const handleSubmit = async () => {
         <div className="p-6 space-y-5">
           <div>
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
-              Nom <span className="text-red-400">*</span>
+              Nom <span className="text-rouge">*</span>
             </label>
             <input
               type="text"
@@ -323,7 +316,7 @@ const handleSubmit = async () => {
           <button
             onClick={handleSubmit}
             disabled={saving || !form.name?.trim() || !form.category}
-            className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-vert text-white disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-dark_vert transition shadow-sm shadow-emerald-200"
+            className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-bleu text-white disabled:opacity-50 flex items-center justify-center gap-2 hover:opacity-90 transition shadow-sm shadow-blue-200"
           >
             {saving ? (
               <>
@@ -353,8 +346,9 @@ const PurchaseFormModal: React.FC<{
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     supplierId: initial?.supplierId ? String(initial.supplierId) : "",
-    totalAmount: initial?.totalAmount ?? ("" as any),
-    taxAmount: initial?.taxAmount ?? ("" as any),
+    totalAmount: initial?.totalAmount ?? "",
+    taxAmount: initial?.taxAmount ?? "",
+    itemName: initial?.itemName || "",
     purchaseDate: initial?.purchaseDate
       ? new Date(initial.purchaseDate).toISOString().slice(0, 10)
       : new Date().toISOString().slice(0, 10),
@@ -364,7 +358,7 @@ const PurchaseFormModal: React.FC<{
   });
   const set = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }));
   const inputClass =
-    "w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent text-sm transition";
+    "w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-vert/40 focus:border-transparent text-sm transition";
   const supplierOptions = suppliers.map((s) => ({
     value: String(s.id),
     label: s.name,
@@ -379,6 +373,7 @@ const PurchaseFormModal: React.FC<{
         supplierId: Number(form.supplierId),
         totalAmount: Number(form.totalAmount),
         taxAmount: form.taxAmount ? Number(form.taxAmount) : undefined,
+        itemName: form.itemName?.trim(),
         purchaseDate: form.purchaseDate,
         invoiceNumber: form.invoiceNumber || undefined,
         status: form.status,
@@ -436,7 +431,7 @@ const PurchaseFormModal: React.FC<{
         <div className="p-6 space-y-5 overflow-y-auto flex-1">
           <div>
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
-              Fournisseur <span className="text-red-400">*</span>
+              Fournisseur <span className="text-rouge">*</span>
             </label>
             <SelectInput
               value={form.supplierId}
@@ -445,17 +440,30 @@ const PurchaseFormModal: React.FC<{
               placeholder="— choisir un fournisseur —"
             />
             {supplierOptions.length === 0 && (
-              <p className="text-[10px] text-orange-500 font-semibold mt-1.5">
+              <p className="text-[10px] text-jaune font-semibold mt-1.5">
                 Aucun fournisseur enregistré. Créez-en un dans l'onglet
                 Fournisseurs.
               </p>
             )}
           </div>
 
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+              Nom de l'article <span className="text-rouge">*</span>
+            </label>
+            <input
+              type="text"
+              value={form.itemName || ""}
+              onChange={(e) => set("itemName", e.target.value)}
+              placeholder="Ex: Concentré de maïs 25kg"
+              className={inputClass}
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
-                Montant total <span className="text-red-400">*</span>
+                Montant total <span className="text-rouge">*</span>
               </label>
               <input
                 type="number"
@@ -484,7 +492,7 @@ const PurchaseFormModal: React.FC<{
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
-                Date d'achat <span className="text-red-400">*</span>
+                Date d'achat <span className="text-rouge">*</span>
               </label>
               <input
                 type="date"
@@ -641,8 +649,8 @@ const PurchasesSuppliersDashboard: React.FC = () => {
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       list = list.filter((p) =>
-        [supplierName(p.supplierId), p.invoiceNumber, p.notes].some((v) =>
-          v?.toLowerCase().includes(q),
+        [supplierName(p.supplierId), p.itemName, p.invoiceNumber, p.notes].some(
+          (v) => v?.toLowerCase().includes(q),
         ),
       );
     }
@@ -664,7 +672,7 @@ const PurchasesSuppliersDashboard: React.FC = () => {
   }, [suppliers, searchTerm]);
 
   const totalSpent = purchases
-    .filter((p) => p.status === "SUCCESS")
+    .filter((p) => p.status === "RECEIVED")
     .reduce((s, p) => s + p.totalAmount, 0);
   const pendingCount = purchases.filter((p) => p.status === "PENDING").length;
 
@@ -683,6 +691,7 @@ const PurchasesSuppliersDashboard: React.FC = () => {
         [
           "Date",
           "Fournisseur",
+          "Article",
           "Montant",
           "Taxes",
           "Statut",
@@ -692,6 +701,7 @@ const PurchasesSuppliersDashboard: React.FC = () => {
         ...filteredPurchases.map((p) => [
           fmtDate(p.purchaseDate),
           supplierName(p.supplierId),
+          p.itemName || "",
           p.totalAmount,
           p.taxAmount ?? "",
           statusConfig[p.status]?.label,
@@ -780,7 +790,11 @@ const PurchasesSuppliersDashboard: React.FC = () => {
                   ? (setEditingPurchase(null), setShowPurchaseForm(true))
                   : (setEditingSupplier(null), setShowSupplierForm(true))
               }
-              className="flex items-center gap-2 px-4 py-2.5 bg-vert text-white rounded-xl font-semibold text-sm hover:bg-dark_vert transition shadow-sm shadow-emerald-200"
+              className={`flex items-center gap-2 px-4 py-2.5 text-white rounded-xl font-semibold text-sm transition shadow-sm ${
+                activeTab === "purchases"
+                  ? "bg-vert hover:bg-dark_vert shadow-emerald-200"
+                  : "bg-bleu hover:opacity-90 shadow-blue-200"
+              }`}
             >
               <Plus className="w-4 h-4" />{" "}
               {activeTab === "purchases"
@@ -801,40 +815,67 @@ const PurchasesSuppliersDashboard: React.FC = () => {
           <StatCard
             label="Montant dépensé"
             value={`${fmtNum(totalSpent)} F`}
-            sub="achats payés"
-            icon={<ReceiptText className="w-5 h-5 text-bleu" />}
-            bg="bg-blue-50"
+            sub="achats reçus"
+            icon={<ReceiptText className="w-5 h-5 text-vert" />}
+            bg="bg-emerald-50"
           />
           <StatCard
             label="En attente"
             value={pendingCount}
-            sub="à régler"
-            icon={<ReceiptText className="w-5 h-5 text-amber-600" />}
-            bg="bg-amber-50"
+            sub="à traiter"
+            icon={<ReceiptText className="w-5 h-5 text-jaune" />}
+            bg="bg-[#E3BA3E]/10"
           />
           <StatCard
             label="Fournisseurs"
             value={suppliers.length}
             sub="actifs"
-            icon={<Building2 className="w-5 h-5 text-jaune" />}
-            bg="bg-yellow-50"
+            icon={<Building2 className="w-5 h-5 text-bleu" />}
+            bg="bg-blue-50"
           />
         </div>
 
-        <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1 w-fit">
-          {(["purchases", "suppliers"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => {
-                setActiveTab(tab);
-                setSearchTerm("");
-                setPage(1);
-              }}
-              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition ${activeTab === tab ? "bg-vert text-white" : "text-gray-500 hover:text-gray-700"}`}
-            >
-              {tab === "purchases" ? "Achats" : "Fournisseurs"}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-2xl p-1.5 w-full sm:w-fit shadow-sm">
+          {(["purchases", "suppliers"] as const).map((tab) => {
+            const isActive = activeTab === tab;
+            const activeBg = tab === "purchases" ? "bg-vert" : "bg-bleu";
+            return (
+              <button
+                key={tab}
+                onClick={() => {
+                  setActiveTab(tab);
+                  setSearchTerm("");
+                  setPage(1);
+                }}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition ${
+                  isActive
+                    ? `${activeBg} text-white shadow-sm`
+                    : "text-gray-500 hover:bg-gray-100"
+                }`}
+              >
+                {tab === "purchases" ? (
+                  <ShoppingBag className="w-4 h-4" />
+                ) : (
+                  <Building2 className="w-4 h-4" />
+                )}
+                {tab === "purchases" ? "Achats" : "Fournisseurs"}
+                {tab === "purchases" && purchases.length > 0 && (
+                  <span
+                    className={`text-[10px] px-1.5 rounded-full ${isActive ? "bg-white/20" : "bg-gray-100"}`}
+                  >
+                    {purchases.length}
+                  </span>
+                )}
+                {tab === "suppliers" && suppliers.length > 0 && (
+                  <span
+                    className={`text-[10px] px-1.5 rounded-full ${isActive ? "bg-white/20" : "bg-gray-100"}`}
+                  >
+                    {suppliers.length}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -844,7 +885,7 @@ const PurchasesSuppliersDashboard: React.FC = () => {
               type="text"
               placeholder={
                 activeTab === "purchases"
-                  ? "Rechercher fournisseur, facture..."
+                  ? "Rechercher fournisseur, article, facture..."
                   : "Rechercher nom, email, téléphone..."
               }
               value={searchTerm}
@@ -852,7 +893,11 @@ const PurchasesSuppliersDashboard: React.FC = () => {
                 setSearchTerm(e.target.value);
                 setPage(1);
               }}
-              className="w-full pl-10 pr-4 py-1.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition"
+              className={`w-full pl-10 pr-4 py-1.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 transition ${
+                activeTab === "purchases"
+                  ? "focus:ring-vert/40"
+                  : "focus:ring-bleu/40"
+              }`}
             />
           </div>
           {activeTab === "purchases" && (
@@ -862,7 +907,7 @@ const PurchasesSuppliersDashboard: React.FC = () => {
                 setFilterStatus(e.target.value);
                 setPage(1);
               }}
-              className="px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              className="px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-vert/40"
             >
               <option value="all">Tous statuts</option>
               {Object.entries(statusConfig).map(([k, v]) => (
@@ -896,12 +941,15 @@ const PurchasesSuppliersDashboard: React.FC = () => {
             </div>
           ) : (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="hidden md:grid grid-cols-[110px_1fr_120px_120px_120px_96px] gap-3 px-5 py-3 border-b border-gray-100 bg-gray-50/80">
+              <div className="hidden md:grid grid-cols-[100px_1fr_160px_110px_110px_100px_90px] gap-3 px-5 py-3 border-b border-gray-100 bg-gray-50/80">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                   Date
                 </p>
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                   Fournisseur
+                </p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  Article
                 </p>
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
                   Facture
@@ -918,13 +966,37 @@ const PurchasesSuppliersDashboard: React.FC = () => {
                 {paginatedPurchases.map((p) => (
                   <div
                     key={p.id}
-                    className="grid grid-cols-[1fr_auto] md:grid-cols-[110px_1fr_120px_120px_120px_96px] gap-3 px-5 py-3.5 hover:bg-gray-50/70 transition items-center group"
+                    className="grid grid-cols-[1fr_auto] md:grid-cols-[100px_1fr_160px_110px_110px_100px_90px] gap-3 px-5 py-3.5 hover:bg-gray-50/70 transition items-center group"
                   >
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 hidden md:block">
                       {fmtDate(p.purchaseDate)}
                     </p>
-                    <p className="font-semibold text-gray-800 text-sm">
-                      {supplierName(p.supplierId)}
+                    <div>
+                      <p className="font-semibold text-gray-800 text-sm">
+                        {supplierName(p.supplierId)}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-2 mt-1 md:hidden">
+                        <span className="text-xs text-gray-400">
+                          {fmtDate(p.purchaseDate)}
+                        </span>
+                        {p.itemName && (
+                          <span className="text-xs text-gray-500">
+                            · {p.itemName}
+                          </span>
+                        )}
+                        <span className="text-xs font-bold text-gray-700">
+                          {fmtNum(p.totalAmount)} F
+                        </span>
+                        <span
+                          className={`inline-flex text-[10px] font-medium px-1.5 py-0.5 rounded-lg ${statusConfig[p.status]?.cls}`}
+                        >
+                          {statusConfig[p.status]?.label}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="hidden md:block text-xs text-gray-600 truncate">
+                      {p.itemName || "—"}
                     </p>
                     <p className="hidden md:block text-xs text-gray-500">
                       {p.invoiceNumber || "—"}
@@ -1015,7 +1087,7 @@ const PurchasesSuppliersDashboard: React.FC = () => {
                 setEditingSupplier(null);
                 setShowSupplierForm(true);
               }}
-              className="mt-2 flex items-center gap-2 px-4 py-2 bg-emerald-50 text-vert rounded-xl text-sm font-semibold hover:bg-emerald-100 transition"
+              className="mt-2 flex items-center gap-2 px-4 py-2 bg-blue-50 text-bleu rounded-xl text-sm font-semibold hover:bg-blue-100 transition"
             >
               <Plus className="w-4 h-4" /> Nouveau fournisseur
             </button>
@@ -1029,8 +1101,8 @@ const PurchasesSuppliersDashboard: React.FC = () => {
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-                      <Building2 className="w-5 h-5 text-vert" />
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                      <Building2 className="w-5 h-5 text-bleu" />
                     </div>
                     <div>
                       <p className="font-bold text-gray-900 text-sm">

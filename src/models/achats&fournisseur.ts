@@ -32,6 +32,7 @@ export interface Purchase {
   totalAmount: number;
   notes?: string;
   purchaseDate: string; 
+  itemName:string;
   invoiceNumber?: string;
   createdAt: string;
   taxAmount?: number;
@@ -41,9 +42,8 @@ export interface Purchase {
 
 export enum PurchaseStatus {
   PENDING = "PENDING",
-  SUCCESS = "SUCCESS",
-  FAILED = "FAILED",
+  RECEIVED="RECEIVED",
   CANCELLED = "CANCELLED",
-  REFUNDED = "REFUNDED",
 }
+
 

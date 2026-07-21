@@ -375,4 +375,55 @@ STOCK_MOVEMENT_UPDATE: (id: string | number) => `stock-movements/${id}`,
 STOCK_MOVEMENT_DELETE: (id: string | number) => `stock-movements/${id}`,
 STOCK_MOVEMENT_GET_BY_ID: (id: string | number) => `stock-movements/${id}`,
 
+
+LIST_SUBSCRIPTIONS: "subscriptions",
+CREATE_SUBSCRIPTION: "subscriptions",
+CANCEL_SUBCRIPTION: (id: string | number) => `subscriptions/${id}/cancel`,
+UPGRADE_SUBSCRIPTION: (id: string | number) => `subscriptions/${id}`,
+DELETE_SUBSCRIPTION: (id: string | number) => `subscriptions/${id}`,
+GET_SUBSCRIPTION_BY_ID: "subscriptions",
+
+
+LIST_PLANS: "plans",
+CREATE_PLAN: "plans",
+UPDATE_PLAN: (id: string | number) => `plans/${id}`,
+DELETE_PLAN: (id: string | number) => `plans/${id}`,
+GET_PLAN_BY_ID: "plans",
+
+LIST_INVOICES: "invoices",
+CREATE_INVOICES: "invoices",
+UPDATE_INVOICES: (id: string | number) => `invoices/${id}`,
+DELETE_INVOICES: (id: string | number) => `invoices/${id}`,
+GET_INVOICES_BY_ID: "invoices",
+
+
+LIST_PAYMENTS: "payments",
+CREATE_PAYMENTS: "payments",
+UPDATE_PAYMENTS: (id: string | number) => `payments/${id}`,
+DELETE_PAYMENTS: (id: string | number) => `payments/${id}`,
+GET_PAYMENTS_BY_ID: "payments",
+
+
+
+
 };
+
+// src/constants/routes.ts
+export const SUBSCRIPTION_ROUTES = {
+  BASE: "subscriptions",
+
+  LIST_BY_ORGANIZATION: (organizationId: string | number) =>
+    `subscriptions/organization/${organizationId}`,
+
+  GET_BY_ID: (id: string | number) => `subscriptions/${id}`,
+
+  CREATE: "subscriptions",
+
+  UPDATE: (id: string | number) => `subscriptions/${id}`,
+
+  CANCEL: (id: string | number) => `subscriptions/${id}/cancel`,
+
+  DELETE: (id: string | number) => `subscriptions/${id}`,
+} as const;
+
+

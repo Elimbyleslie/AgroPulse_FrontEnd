@@ -61,8 +61,6 @@ const SelectInput = ({
               key={option.value}
               onClick={() => {
                 onChange(option.value);
-                console.log("SelectInput onChange →", value);
-
                 setOpen(false);
               }}
               className="cursor-pointer px-3 py-2 text-sm hover:bg-green-50"
