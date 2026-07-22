@@ -1,4 +1,3 @@
-import React from "react";
 import { FaCheckCircle } from "react-icons/fa";
 import appareil from "../../assets/images/ChatGPT_Image_19_févr._2026__15_13_53-removebg-preview.png";
 import { Link } from "react-router-dom";

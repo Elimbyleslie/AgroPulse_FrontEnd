@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // src/components/Topbar.tsx
-import React, { useState, useEffect } from "react";
+import {useState, useEffect } from "react";
 import logo from "../../assets/images/AgroPulse-1.png";
 import logo2 from "../../assets/images/agropulse.png";
 import Button from "../../components/UI/Button";
