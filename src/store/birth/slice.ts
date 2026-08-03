@@ -202,12 +202,10 @@ const birthSlice = createSlice({
       .addCase(deleteReproductionWithBirth.pending, (state) => {
         state.reproState = { loading: true, error: null, success: false };
       })
-      .addCase(deleteReproductionWithBirth.fulfilled, (state, action) => {
-        state.reproState.loading = false;
-        state.reproState.success = true;
-        const deletedId = action.payload.data ;
-        state.reproductions = state.reproductions.filter((r) => r.id !== deletedId);
-      })
+     .addCase(deleteReproductionWithBirth.fulfilled, (state, action) => {
+  const deletedId = action.payload.data;
+  state.reproductions = state.reproductions.filter((r) => r.id !== deletedId);
+})
       .addCase(deleteReproductionWithBirth.rejected, (state, action) => {
         state.reproState.loading = false;
         state.reproState.error   = action.payload ?? null;
@@ -235,13 +233,10 @@ const birthSlice = createSlice({
         state.reproState.loading = true;
         state.reproState.error   = null;
       })
-      .addCase(getReproductionWithBirthById.fulfilled, (state, action) => {
-        state.reproState.loading = false;
-        const payload = action.payload?.data as any;
-        // Ici on pourrait stocker la repro actuelle dans le state si besoin
-        state.reproductions = Array.isArray(payload) ? payload : [];
-
-      })
+    .addCase(getReproductionWithBirthById.fulfilled, (state, action) => {
+  const payload = action.payload?.data as any;
+  state.reproductions = Array.isArray(payload) ? payload : [];
+})
       .addCase(getReproductionWithBirthById.rejected, (state, action) => {
         state.reproState.loading = false;
         state.reproState.error   = action.payload ?? null;

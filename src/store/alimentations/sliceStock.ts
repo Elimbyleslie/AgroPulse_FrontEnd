@@ -50,7 +50,7 @@ const initialState: FeedStockState = {
 };
 
 const FeedStockSlice = createSlice({
-  name: "FeedStock",
+  name: "feedStock",
   initialState,
   reducers: {
     resetFeedStockState(state) {
@@ -160,9 +160,9 @@ const FeedStockSlice = createSlice({
 
 export const { resetFeedStockState, clearCurrentFeedStock } = FeedStockSlice.actions;
 
-export const selectFeedStock = (state: RootState) => state.FeedStock.FeedStock;
-export const selectCurrentFeedStock = (state: RootState) => state.FeedStock.currentFeedStock;
-export const selectFeedStockPagination = (state: RootState) => state.FeedStock.FeedStockPagination;
-export const selectFeedStockState = (state: RootState) => state.FeedStock.FeedStockState;
+export const selectFeedStock = (state: RootState) => state.feedStock.FeedStock;
+export const selectCurrentFeedStock = (state: RootState) => state.feedStock.currentFeedStock;
+export const selectFeedStockPagination = (state: RootState) => state.feedStock.FeedStockPagination;
+export const selectFeedStockState = (state: RootState) => state.feedStock.FeedStockState;
 
 export default FeedStockSlice;

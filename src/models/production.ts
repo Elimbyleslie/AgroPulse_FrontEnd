@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+  /* eslint-disable @typescript-eslint/no-explicit-any */
 import { FecthLot } from "./lot";
 import { Animal } from "./animal";
 import { Herd } from "./herd";
@@ -11,8 +11,8 @@ export interface Production {
   herdId?: number | null;
   penId?: number | null;
   date?: string;
-  Category: 'Product' | 'byproduct';
-  Type: string;
+  category: 'Product' | 'byproduct';
+  type: string;
   quantity: number;
   unit: string;
   qualityGrade?: 'A' | 'B' | 'C' | null;
@@ -23,7 +23,6 @@ export interface Production {
   animal?: Animal ;
   herd?: Herd ;
   pen?: Pen ;
-  saleItem?:SaleItem
 
 
 }
@@ -44,9 +43,9 @@ export interface FetchProduction extends Production {
 
 export interface ProductionStats {
   groupedStats: Array<{
-    Type: string;
+    type: string;
     unit: string;
-    Category: string;
+    category: string;
     _sum: { quantity: number };
     _avg: { quantity: number | null };
     _count: { id: number };

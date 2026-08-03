@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useCallback } from "react";
 import { useAppDispatch, useAppSelector } from "../../../hooks/store";
@@ -123,7 +124,7 @@ const LotRow: React.FC<{
 
   const totalQty = productions.reduce((s, p) => s + p.quantity, 0);
   const avgQty = productions.length > 0 ? totalQty / productions.length : 0;
-  const types = [...new Set(productions.map((p) => p.Type))];
+  const types = [...new Set(productions.map((p) => p.type))];
   const grades = productions.map((p) => p.qualityGrade).filter(Boolean);
   const dominantGrade = grades.length > 0
     ? (["A", "B", "C"].find((g) => grades.filter((x) => x === g).length === Math.max(...["A","B","C"].map((gg) => grades.filter((x) => x === gg).length))) || null)
@@ -196,7 +197,7 @@ const LotRow: React.FC<{
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Types de production</p>
             <div className="flex flex-wrap gap-2">
               {types.map((t) => {
-                const typeQty = productions.filter((p) => p.Type === t).reduce((s, p) => s + p.quantity, 0);
+                const typeQty = productions.filter((p) => p.type === t).reduce((s, p) => s + p.quantity, 0);
                 return (
                   <div key={t} className="bg-white border border-gray-100 rounded-xl px-3 py-2 flex items-center gap-2 shadow-sm">
                     <span className="w-2 h-2 rounded-full bg-vert" />
@@ -221,7 +222,7 @@ const LotRow: React.FC<{
                   <div key={p.id} className="flex items-center justify-between bg-white rounded-xl px-3 py-2 border border-gray-100">
                     <div className="flex items-center gap-3">
                       <span className="text-xs text-gray-400 w-24">{fmtDate(p.date)}</span>
-                      <span className="text-xs font-semibold text-gray-700">{p.Type}</span>
+                      <span className="text-xs font-semibold text-gray-700">{p.type}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-xs font-bold text-gray-800">{p.quantity} {p.unit}</span>
@@ -280,14 +281,23 @@ const LotAnalysis: React.FC = () => {
   const grouped = React.useMemo(() => {
     const map = new Map<string, { id: number | string; name: string; type: GroupBy; prods: FetchProduction[] }>();
 
+    const createEntity = (
+      id: number | string | undefined,
+      name: string | undefined,
+      fallbackName: string,
+    ): { id: number | string; name: string } => ({
+      id: typeof id === "number" || typeof id === "string" ? id : 0,
+      name: name ?? fallbackName,
+    });
+
     for (const p of productions) {
       let key: string | null = null;
       let entity: { id: number | string; name: string } | null = null;
 
-      if (groupBy === "lot" && p.lot) { key = `lot-${p.lot.id}`; entity = p.lot; }
-      else if (groupBy === "herd" && p.herd) { key = `herd-${p.herd.id}`; entity = p.herd; }
-      else if (groupBy === "animal" && p.animal) { key = `animal-${p.animal.id}`; entity = { id: p.animal.id, name: p.animal.name }; }
-      else if (groupBy === "pen" && p.pen) { key = `pen-${p.pen.id}`; entity = p.pen; }
+      if (groupBy === "lot" && p.lot) { key = `lot-${p.lot.id ?? "unknown"}`; entity = createEntity(p.lot.id, p.lot.name, "Lot sans nom"); }
+      else if (groupBy === "herd" && p.herd) { key = `herd-${p.herd.id ?? "unknown"}`; entity = createEntity(p.herd.id, p.herd.name, "Troupeau sans nom"); }
+      else if (groupBy === "animal" && p.animal) { key = `animal-${p.animal.id ?? "unknown"}`; entity = createEntity(p.animal.id, p.animal.name, "Animal sans nom"); }
+      else if (groupBy === "pen" && p.pen) { key = `pen-${p.pen.id ?? "unknown"}`; entity = createEntity(p.pen.id, p.pen.name, "Parc sans nom"); }
       else { key = `none-${groupBy}`; entity = { id: 0, name: `Sans ${groupBy}` }; }
 
       if (!key || !entity) continue;
@@ -298,13 +308,13 @@ const LotAnalysis: React.FC = () => {
   }, [productions, groupBy]);
 
   // Types distincts pour filtre
-  const allTypes = [...new Set(productions.map((p) => p.Type))];
+  const allTypes = [...new Set(productions.map((p) => p.type))];
 
   // Filtrer + trier
   const displayed = React.useMemo(() => {
     let list = grouped;
     if (searchTerm) list = list.filter((g) => g.name.toLowerCase().includes(searchTerm.toLowerCase()));
-    if (filterType !== "all") list = list.filter((g) => g.prods.some((p) => p.Type === filterType));
+    if (filterType !== "all") list = list.filter((g) => g.prods.some((p) => p.type === filterType));
 
     return [...list].sort((a, b) => {
       const aVal = sortBy === "total" ? a.prods.reduce((s, p) => s + p.quantity, 0)

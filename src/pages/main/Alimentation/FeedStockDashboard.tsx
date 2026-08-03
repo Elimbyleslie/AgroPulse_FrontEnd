@@ -15,7 +15,6 @@ import {
   BarChart3,
   Calendar,
   MapPin,
-  DollarSign,
   Hash,
   ShieldAlert,
   Clock,
@@ -52,13 +51,20 @@ const Spinner = ({ className = "w-4 h-4" }: { className?: string }) => (
 // InventoryDashboard : le champ status en base peut être stale après un
 // réapprovisionnement si le backend ne le recalcule pas).
 const deriveStatus = (s: FeedStock): StockStatus => {
+  // Prisma renvoie les champs Decimal (quantity, minQuantity) sous forme de
+  // string dans le JSON. Comparer deux strings avec <= fait une comparaison
+  // LEXICOGRAPHIQUE en JS ("490" <= "50" est vrai !), pas numérique.
+  // On force donc explicitement la conversion en Number avant de comparer.
+  const qty = Number(s.quantity);
+  const minQty = s.minQuantity != null ? Number(s.minQuantity) : null;
+
   if (s.expiryDate != null && new Date(s.expiryDate) < new Date()) {
     return StockStatus.EXPIRED;
   }
-  if (s.quantity <= 0) {
+  if (qty <= 0) {
     return StockStatus.OUT_OF_STOCK;
   }
-  if (s.minQuantity != null && s.minQuantity > 0 && s.quantity <= s.minQuantity) {
+  if (minQty != null && minQty > 0 && qty <= minQty) {
     return StockStatus.LOW_STOCK;
   }
   return StockStatus.IN_STOCK;
@@ -95,8 +101,8 @@ const STATUS_META: Record<StockStatus, { label: string; cls: string; dot: string
 const fmtDate = (d?: Date | string | null) =>
   d ? new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 
-const fmtCurrency = (v?: number | null) =>
-  v != null ? `${v.toLocaleString("fr-FR")} FCFA` : "—";
+const fmtCurrency = (v?: number | string | null) =>
+  v != null ? `${Number(v).toLocaleString("fr-FR")} FCFA` : "—";
 
 // ── Options ───────────────────────────────────────────────────────────────────
 const UNIT_OPTIONS = [
@@ -285,13 +291,6 @@ const DetailModal: React.FC<{
                 {fmtDate(item.expiryDate)}
               </p>
             </div>
-
-            <div className="bg-gray-50 rounded-xl p-3">
-              <p className="text-xs font-black text-gray-400 uppercase mb-1 flex items-center gap-1">
-                <DollarSign className="w-3 h-3" />Prix unitaire
-              </p>
-              <p className="text-sm font-black text-gray-700">{fmtCurrency(item.unitPrice)}</p>
-            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
@@ -356,7 +355,6 @@ const FormModal: React.FC<{
     category: initial?.category ?? FeedCategory.FORAGE,
     status: initial?.status ?? StockStatus.IN_STOCK,
     minQuantity: (initial?.minQuantity ?? "") as any,
-    unitPrice: (initial?.unitPrice ?? "") as any,
     expiryDate: initial?.expiryDate ? new Date(initial.expiryDate).toISOString().slice(0, 10) : "",
     location: initial?.location ?? "",
     sku: initial?.sku ?? "",
@@ -383,7 +381,6 @@ const FormModal: React.FC<{
         category: form.category as FeedCategory,
         status: form.status as StockStatus,
         minQuantity: form.minQuantity !== "" ? Number(form.minQuantity) : undefined,
-        unitPrice: form.unitPrice !== "" ? Number(form.unitPrice) : undefined,
         expiryDate: form.expiryDate ? new Date(form.expiryDate) : undefined,
         location: form.location || undefined,
         sku: form.sku || undefined,
@@ -467,16 +464,9 @@ const FormModal: React.FC<{
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-black text-gray-400 uppercase mb-1 block">Prix unitaire (FCFA)</label>
-              <input type="number" min="0" step="1" value={form.unitPrice}
-                onChange={(e) => set("unitPrice", e.target.value)} placeholder="ex: 2500" className={inp} />
-            </div>
-            <div>
-              <label className="text-xs font-black text-gray-400 uppercase mb-1 block">Date de péremption</label>
-              <input type="date" value={form.expiryDate} onChange={(e) => set("expiryDate", e.target.value)} className={inp} />
-            </div>
+          <div>
+            <label className="text-xs font-black text-gray-400 uppercase mb-1 block">Date de péremption</label>
+            <input type="date" value={form.expiryDate} onChange={(e) => set("expiryDate", e.target.value)} className={inp} />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -594,7 +584,7 @@ const FeedStockDashboard: React.FC = () => {
 
   const list: FeedStock[] = Array.isArray(feedStockRaw) ? feedStockRaw : feedStockRaw ? [feedStockRaw] : [];
 
-  const totalValue = list.reduce((acc, s) => acc + (s.totalValue ?? s.quantity * (s.unitPrice ?? 0)), 0);
+  const totalValue = list.reduce((acc, s) => acc + Number(s.totalValue ?? 0), 0);
   const lowCount = list.filter(isLowStock).length;
   const expiredCount = list.filter(isExpired).length;
 

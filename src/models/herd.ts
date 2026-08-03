@@ -1,3 +1,5 @@
+import { Animal } from "./animal";
+import { FecthLot } from "./lot";
 export interface Herd {
   id?: number;
   farmId: number;
@@ -5,6 +7,9 @@ export interface Herd {
   name: string;
   photo?: string;
   createdAt?: Date;
+  lots : FecthLot[];
+  animals:Animal
+  barnId:number
 }
 
 export interface InputCreateHerd {

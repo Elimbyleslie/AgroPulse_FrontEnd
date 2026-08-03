@@ -92,7 +92,6 @@ export interface SaleItem {
   saleId: number;
   productName: string;
   category?: ProductCategory;
-  productType?: string;
 
   unit?: string;
 

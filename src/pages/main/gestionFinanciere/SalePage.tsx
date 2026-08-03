@@ -23,10 +23,14 @@ import { getUserFarms } from "../../../store/farm/action";
 import { getAllLots } from "../../../store/lot/action";
 import { getAllAnimals } from "../../../store/animal/action";
 import { fetchClients } from "../../../store/Client/action";
+import { fetchProductions } from "../../../store/production/action";
 
-import { Sale, SaleItem, PaymentMethod } from "../../../models/gestionFinanciere";
+import { Sale, SaleItem, PaymentMethod, ProductCategory } from "../../../models/gestionFinanciere";
 import { Client } from "../../../models/client";
+import { FetchProduction } from "../../../models/production";
 import { LoadingType } from "../../../models/store";
+
+import SelectInput from "../../../components/UI/SelectInput";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -85,6 +89,21 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   [PaymentMethod.others]:       "Autre",
 };
 
+const CATEGORY_LABELS: Record<ProductCategory, string> = {
+  [ProductCategory.Product]:   "Produit",
+  [ProductCategory.byproduct]: "Sous-produit",
+};
+
+const STATUS_OPTIONS = [
+  { value: "COMPLETED", label: "Complétée" },
+  { value: "PENDING", label: "En attente" },
+  { value: "CANCELLED", label: "Annulée" },
+];
+
+const PAYMENT_OPTIONS = Object.entries(PAYMENT_LABELS).map(([value, label]) => ({ value, label }));
+
+const CATEGORY_OPTIONS = Object.entries(CATEGORY_LABELS).map(([value, label]) => ({ value, label }));
+
 // ── Stat Card ─────────────────────────────────────────────────────────────────
 
 const StatCard: React.FC<{
@@ -141,16 +160,40 @@ const SaleItemsPanel: React.FC<{
   items: SaleItem[];
   lots: any[];
   animals: any[];
+  productions: FetchProduction[];
   loadingItems: boolean;
   onClose: () => void;
   onAddItem: (item: Partial<SaleItem>) => Promise<void>;
   onDeleteItem: (id: number) => Promise<void>;
-}> = ({ sale, items, lots, animals, loadingItems, onClose, onAddItem, onDeleteItem }) => {
+}> = ({ sale, items, lots, animals, productions, loadingItems, onClose, onAddItem, onDeleteItem }) => {
   const [form, setForm] = useState({
-    productName: "", description: "", quantity: "", unitPrice: "", lotId: "", animalId: "",
+    productName: "", description: "", quantity: "", unitPrice: "", unit: "",
+    lotId: "", animalId: "", productionId: "", category: ProductCategory.Product as string,
   });
   const [saving, setSaving] = useState(false);
   const set = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }));
+
+  const productionOptions = useMemo(
+    () => [
+      { value: "", label: "— aucune (saisie manuelle) —" },
+      ...productions.map((p: any) => ({
+        value: p.id,
+        label: `${p.type} — ${p.quantity} ${p.unit} dispo`,
+      })),
+    ],
+    [productions]
+  );
+
+  const handleProductionSelect = (v: any) => {
+    const prodId = String(v);
+    set("productionId", prodId);
+    const prod = productions.find((p: any) => String(p.id) === prodId);
+    if (prod) {
+      set("category", prod.category);
+      set("unit", prod.unit);
+      if (!form.productName) set("productName", (prod as any).type);
+    }
+  };
 
   const subtotal = useMemo(
     () => (parseFloat(form.quantity) || 0) * (parseFloat(form.unitPrice) || 0),
@@ -159,6 +202,15 @@ const SaleItemsPanel: React.FC<{
   const itemsTotal = useMemo(
     () => (Array.isArray(items) ? items : []).reduce((a, i) => a + (Number(i?.totalPrice) || 0), 0),
     [items]
+  );
+
+  const lotOptions = useMemo(
+    () => [{ value: "", label: "— aucun —" }, ...lots.map((l) => ({ value: l.id, label: l.name ?? `Lot #${l.id}` }))],
+    [lots]
+  );
+  const animalOptions = useMemo(
+    () => [{ value: "", label: "— aucun —" }, ...animals.map((a) => ({ value: a.id, label: a.name ?? `Animal #${a.id}` }))],
+    [animals]
   );
 
   const handleAdd = async () => {
@@ -172,10 +224,13 @@ const SaleItemsPanel: React.FC<{
         quantity: parseFloat(form.quantity),
         unitPrice: parseFloat(form.unitPrice),
         totalPrice: subtotal,
-        lotId: form.lotId ? parseInt(form.lotId) : undefined,
-        animalId: form.animalId ? parseInt(form.animalId) : undefined,
+        category: form.category as ProductCategory,
+        unit: form.unit || "unité",
+        productionId: form.productionId ? parseInt(form.productionId) : undefined,
+        lotId: form.lotId ? parseInt(String(form.lotId)) : undefined,
+        animalId: form.animalId ? parseInt(String(form.animalId)) : undefined,
       });
-      setForm({ productName: "", description: "", quantity: "", unitPrice: "", lotId: "", animalId: "" });
+      setForm({ productName: "", description: "", quantity: "", unitPrice: "", unit: "", lotId: "", animalId: "", productionId: "", category: ProductCategory.Product });
     } finally {
       setSaving(false);
     }
@@ -219,7 +274,19 @@ const SaleItemsPanel: React.FC<{
               <input type="text" value={form.description} onChange={(e) => set("description", e.target.value)}
                 className={inputClass} placeholder="Détails optionnels..." />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-gray-400 block mb-1">Production source</label>
+              <SelectInput
+                value={form.productionId}
+                onChange={handleProductionSelect}
+                options={productionOptions}
+                placeholder="— aucune (saisie manuelle) —"
+              />
+              <p className="text-[11px] text-gray-400 mt-1">
+                Sélectionner une production pré-remplit catégorie et unité.
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="text-xs font-semibold text-gray-400 block mb-1">Quantité *</label>
                 <input type="number" step="0.01" min="0" value={form.quantity}
@@ -233,21 +300,38 @@ const SaleItemsPanel: React.FC<{
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">FCFA</span>
                 </div>
               </div>
+              <div>
+                <label className="text-xs font-semibold text-gray-400 block mb-1">Unité *</label>
+                <input type="text" value={form.unit} onChange={(e) => set("unit", e.target.value)}
+                  className={inputClass} placeholder="kg, unité, sac…" />
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-gray-400 block mb-1">Catégorie</label>
+                <SelectInput
+                  value={form.category}
+                  onChange={(v) => set("category", v)}
+                  options={CATEGORY_OPTIONS}
+                />
+              </div>
               <div>
                 <label className="text-xs font-semibold text-gray-400 block mb-1">Lot</label>
-                <select value={form.lotId} onChange={(e) => set("lotId", e.target.value)} className={inputClass}>
-                  <option value="">— aucun —</option>
-                  {lots.map((l) => <option key={l.id} value={l.id}>{l.name ?? `Lot #${l.id}`}</option>)}
-                </select>
+                <SelectInput
+                  value={form.lotId}
+                  onChange={(v) => set("lotId", String(v))}
+                  options={lotOptions}
+                  placeholder="— aucun —"
+                />
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-400 block mb-1">Animal</label>
-                <select value={form.animalId} onChange={(e) => set("animalId", e.target.value)} className={inputClass}>
-                  <option value="">— aucun —</option>
-                  {animals.map((a) => <option key={a.id} value={a.id}>{a.name ?? `Animal #${a.id}`}</option>)}
-                </select>
+                <SelectInput
+                  value={form.animalId}
+                  onChange={(v) => set("animalId", String(v))}
+                  options={animalOptions}
+                  placeholder="— aucun —"
+                />
               </div>
             </div>
             {subtotal > 0 && (
@@ -257,7 +341,7 @@ const SaleItemsPanel: React.FC<{
               </div>
             )}
             <button onClick={handleAdd}
-              disabled={saving || !form.productName || !form.quantity || !form.unitPrice}
+              disabled={saving || !form.productName || !form.quantity || !form.unitPrice || !form.unit}
               className="w-full py-2.5 rounded-xl text-sm font-semibold bg-vert text-white hover:bg-dark_vert disabled:opacity-50 flex items-center justify-center gap-2">
               {saving ? <><Spinner /> Ajout…</> : <><Plus className="w-4 h-4" /> Ajouter l'article</>}
             </button>
@@ -321,6 +405,9 @@ interface DraftItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  category: ProductCategory;
+  unit: string;
+  productionId?: number;
   lotId?: number;
   animalId?: number;
 }
@@ -331,9 +418,10 @@ const SaleFormModal: React.FC<{
   clients: Client[];
   lots: any[];
   animals: any[];
+  productions: FetchProduction[];
   onClose: () => void;
   onSuccess: (sale: Sale) => void;
-}> = ({ farmId, initial, clients, lots, animals, onClose, onSuccess }) => {
+}> = ({ farmId, initial, clients, lots, animals, productions, onClose, onSuccess }) => {
   const dispatch = useAppDispatch();
   const isEdit = !!initial;
   const [saving, setSaving] = useState(false);
@@ -351,9 +439,32 @@ const SaleFormModal: React.FC<{
   // Articles (création uniquement)
   const [draftItems, setDraftItems] = useState<DraftItem[]>([]);
   const [itemForm, setItemForm] = useState({
-    productName: "", description: "", quantity: "", unitPrice: "", lotId: "", animalId: "",
+    productName: "", description: "", quantity: "", unitPrice: "", unit: "",
+    lotId: "", animalId: "", productionId: "", category: ProductCategory.Product as ProductCategory,
   });
   const setItem = (k: string, v: any) => setItemForm((p) => ({ ...p, [k]: v }));
+
+  const productionOptions = useMemo(
+    () => [
+      { value: "", label: "— aucune (saisie manuelle) —" },
+      ...productions.map((p: any) => ({
+        value: p.id,
+        label: `${p.type} — ${p.quantity} ${p.unit} dispo`,
+      })),
+    ],
+    [productions]
+  );
+
+  const handleProductionSelect = (v: any) => {
+    const prodId = String(v);
+    setItem("productionId", prodId);
+    const prod = productions.find((p: any) => String(p.id) === prodId);
+    if (prod) {
+      setItem("category", prod.category);
+      setItem("unit", prod.unit);
+      if (!itemForm.productName) setItem("productName", (prod as any).type);
+    }
+  };
 
   const subtotal = useMemo(
     () => (parseFloat(itemForm.quantity) || 0) * (parseFloat(itemForm.unitPrice) || 0),
@@ -380,10 +491,13 @@ const SaleFormModal: React.FC<{
       quantity: parseFloat(itemForm.quantity),
       unitPrice: parseFloat(itemForm.unitPrice),
       totalPrice: subtotal,
-      lotId: itemForm.lotId ? parseInt(itemForm.lotId) : undefined,
-      animalId: itemForm.animalId ? parseInt(itemForm.animalId) : undefined,
+      category: itemForm.category,
+      unit: itemForm.unit || "unité",
+      productionId: itemForm.productionId ? parseInt(itemForm.productionId) : undefined,
+      lotId: itemForm.lotId ? parseInt(String(itemForm.lotId)) : undefined,
+      animalId: itemForm.animalId ? parseInt(String(itemForm.animalId)) : undefined,
     }]);
-    setItemForm({ productName: "", description: "", quantity: "", unitPrice: "", lotId: "", animalId: "" });
+    setItemForm({ productName: "", description: "", quantity: "", unitPrice: "", unit: "", lotId: "", animalId: "", productionId: "", category: ProductCategory.Product });
   };
 
   const removeDraftItem = (id: string) => setDraftItems((p) => p.filter((i) => i.id !== id));
@@ -425,6 +539,9 @@ const SaleFormModal: React.FC<{
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
                 totalPrice: item.totalPrice,
+                category: item.category,
+                unit: item.unit,
+                productionId: item.productionId,
                 lotId: item.lotId,
                 animalId: item.animalId,
               } as Partial<SaleItem>)).unwrap()
@@ -445,6 +562,22 @@ const SaleFormModal: React.FC<{
 
   const inputClass = "w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm transition";
   const labelClass = "text-xs font-bold text-gray-500 uppercase tracking-wider block mb-1.5";
+
+  const clientOptions = useMemo(
+    () => [
+      { value: "", label: "— Aucun client —" },
+      ...clients.map((c) => ({ value: c.id as number, label: c.name + (c.phone ? ` · ${c.phone}` : "") })),
+    ],
+    [clients]
+  );
+  const lotOptions = useMemo(
+    () => [{ value: "", label: "— aucun —" }, ...lots.map((l) => ({ value: l.id, label: l.name ?? `Lot #${l.id}` }))],
+    [lots]
+  );
+  const animalOptions = useMemo(
+    () => [{ value: "", label: "— aucun —" }, ...animals.map((a) => ({ value: a.id, label: a.name ?? `Animal #${a.id}` }))],
+    [animals]
+  );
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
@@ -482,21 +615,21 @@ const SaleFormModal: React.FC<{
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelClass}>Statut</label>
-              <select value={form.status} onChange={(e) => set("status", e.target.value)} className={inputClass}>
-                <option value="COMPLETED">Complétée</option>
-                <option value="PENDING">En attente</option>
-                <option value="CANCELLED">Annulée</option>
-              </select>
+              <SelectInput
+                value={form.status}
+                onChange={(v) => set("status", v)}
+                options={STATUS_OPTIONS}
+              />
             </div>
             <div>
               <label className={labelClass}>
                 <span className="flex items-center gap-1"><CreditCard className="w-3 h-3" /> Paiement</span>
               </label>
-              <select value={form.paymentMethod} onChange={(e) => set("paymentMethod", e.target.value)} className={inputClass}>
-                {Object.entries(PAYMENT_LABELS).map(([val, label]) => (
-                  <option key={val} value={val}>{label}</option>
-                ))}
-              </select>
+              <SelectInput
+                value={form.paymentMethod}
+                onChange={(v) => set("paymentMethod", v)}
+                options={PAYMENT_OPTIONS}
+              />
             </div>
           </div>
 
@@ -504,12 +637,12 @@ const SaleFormModal: React.FC<{
             <label className={labelClass}>
               <span className="flex items-center gap-1"><User className="w-3 h-3" /> Client</span>
             </label>
-            <select value={form.clientId} onChange={(e) => set("clientId", e.target.value)} className={inputClass}>
-              <option value="">— Aucun client —</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}{c.phone ? ` · ${c.phone}` : ""}</option>
-              ))}
-            </select>
+            <SelectInput
+              value={form.clientId}
+              onChange={(v) => set("clientId", String(v))}
+              options={clientOptions}
+              placeholder="— Aucun client —"
+            />
           </div>
 
           <div>
@@ -539,7 +672,19 @@ const SaleFormModal: React.FC<{
                       className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm transition"
                       placeholder="Optionnel..." />
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-400 block mb-1">Production source</label>
+                    <SelectInput
+                      value={itemForm.productionId}
+                      onChange={handleProductionSelect}
+                      options={productionOptions}
+                      placeholder="— aucune (saisie manuelle) —"
+                    />
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      Sélectionner une production pré-remplit catégorie et unité.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
                     <div>
                       <label className="text-xs font-semibold text-gray-400 block mb-1">Quantité</label>
                       <input type="number" step="0.01" min="0" value={itemForm.quantity}
@@ -555,23 +700,39 @@ const SaleFormModal: React.FC<{
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">FCFA</span>
                       </div>
                     </div>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-400 block mb-1">Unité</label>
+                      <input type="text" value={itemForm.unit} onChange={(e) => setItem("unit", e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm transition"
+                        placeholder="kg, unité, sac…" />
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-gray-400 block mb-1">Catégorie</label>
+                      <SelectInput
+                        value={itemForm.category}
+                        onChange={(v) => setItem("category", v)}
+                        options={CATEGORY_OPTIONS}
+                      />
+                    </div>
                     <div>
                       <label className="text-xs font-semibold text-gray-400 block mb-1">Lot</label>
-                      <select value={itemForm.lotId} onChange={(e) => setItem("lotId", e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 transition">
-                        <option value="">— aucun —</option>
-                        {lots.map((l) => <option key={l.id} value={l.id}>{l.name ?? `Lot #${l.id}`}</option>)}
-                      </select>
+                      <SelectInput
+                        value={itemForm.lotId}
+                        onChange={(v) => setItem("lotId", String(v))}
+                        options={lotOptions}
+                        placeholder="— aucun —"
+                      />
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-gray-400 block mb-1">Animal</label>
-                      <select value={itemForm.animalId} onChange={(e) => setItem("animalId", e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 transition">
-                        <option value="">— aucun —</option>
-                        {animals.map((a) => <option key={a.id} value={a.id}>{a.name ?? `Animal #${a.id}`}</option>)}
-                      </select>
+                      <SelectInput
+                        value={itemForm.animalId}
+                        onChange={(v) => setItem("animalId", String(v))}
+                        options={animalOptions}
+                        placeholder="— aucun —"
+                      />
                     </div>
                   </div>
                   {subtotal > 0 && (
@@ -581,7 +742,7 @@ const SaleFormModal: React.FC<{
                     </div>
                   )}
                   <button onClick={addDraftItem}
-                    disabled={!itemForm.productName || !itemForm.quantity || !itemForm.unitPrice}
+                    disabled={!itemForm.productName || !itemForm.quantity || !itemForm.unitPrice || !itemForm.unit}
                     className="w-full py-2 rounded-xl text-sm font-semibold bg-vert text-white hover:bg-dark_vert disabled:opacity-40 flex items-center justify-center gap-2">
                     <Plus className="w-4 h-4" /> Ajouter
                   </button>
@@ -594,7 +755,7 @@ const SaleFormModal: React.FC<{
                         className="flex items-center justify-between bg-white rounded-xl border border-gray-100 px-4 py-3">
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-gray-800 truncate">{item.productName}</p>
-                          <p className="text-xs text-gray-400">{item.quantity} × {fmtCurrency(item.unitPrice)}</p>
+                          <p className="text-xs text-gray-400">{item.quantity} × {fmtCurrency(item.unitPrice)} · {CATEGORY_LABELS[item.category]}</p>
                         </div>
                         <div className="flex items-center gap-3 flex-shrink-0 ml-3">
                           <span className="text-sm font-black text-gray-800">{fmtCurrency(item.totalPrice)}</span>
@@ -694,8 +855,10 @@ const SalesDashboard: React.FC = () => {
 
   const lotsRaw = useAppSelector((s: any) => s.lot?.entities ?? []);
   const animalsRaw = useAppSelector((s: any) => s.animal?.animalist?.entities);
+  const productionsRaw = useAppSelector((s: any) => s.production?.list?.entities ?? []);
   const lots: any[] = Array.isArray(lotsRaw) ? lotsRaw : [];
   const animals: any[] = Array.isArray(animalsRaw) ? animalsRaw : [];
+  const productions: FetchProduction[] = Array.isArray(productionsRaw) ? productionsRaw : [];
 
   // UI State
   const [searchTerm, setSearchTerm] = useState("");
@@ -723,6 +886,7 @@ const SalesDashboard: React.FC = () => {
       dispatch(getAllLots({ farmId, limit: 100 }));
       dispatch(getAllAnimals({ farmId, limit: 200, page: 1 }));
       dispatch(fetchClients({ farmId }));
+      dispatch(fetchProductions({ farmId, limit: 200 }));
     }
   }, [farmId, fetchData, dispatch]);
 
@@ -835,6 +999,11 @@ const SalesDashboard: React.FC = () => {
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
   const activeFilters = [!!dateFrom, !!dateTo, !!searchTerm, !!statusFilter].filter(Boolean).length;
 
+  const statusFilterOptions = useMemo(
+    () => [{ value: "", label: "Tous les statuts" }, ...STATUS_OPTIONS],
+    []
+  );
+
   const exportCSV = () => {
     const rows = [
       ["ID", "Date", "Statut", "Paiement", "Client", "Total", "Notes"],
@@ -937,13 +1106,12 @@ const SalesDashboard: React.FC = () => {
             </div>
             <div>
               <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Statut</label>
-              <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-                className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400">
-                <option value="">Tous les statuts</option>
-                <option value="COMPLETED">Complétées</option>
-                <option value="PENDING">En attente</option>
-                <option value="CANCELLED">Annulées</option>
-              </select>
+              <SelectInput
+                value={statusFilter}
+                onChange={(v) => { setStatusFilter(String(v)); setPage(1); }}
+                options={statusFilterOptions}
+                placeholder="Tous les statuts"
+              />
             </div>
           </div>
         )}
@@ -1071,6 +1239,7 @@ const SalesDashboard: React.FC = () => {
           clients={clients}
           lots={lots}
           animals={animals}
+          productions={productions}
           onClose={() => { setShowForm(false); setEditingItem(null); }}
           onSuccess={() => {
             setShowForm(false);
@@ -1093,6 +1262,7 @@ const SalesDashboard: React.FC = () => {
           items={detailSaleItems}
           lots={lots}
           animals={animals}
+          productions={productions}
           loadingItems={loadingItems && detailSaleItems.length === 0}
           onClose={() => setDetailSale(null)}
           onAddItem={handleAddItem}
