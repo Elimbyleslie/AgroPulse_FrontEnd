@@ -53,3 +53,17 @@ export interface FetchAnimalArgs {
   skip?: number;
   farmId: number;
 }
+
+
+export enum Gender {
+  male = "male",
+  female="female",
+  unknown="unknown"
+}
+
+export enum AnimalStatus {
+  active = "active",
+  sold="sold",
+  dead="dead",
+  transferred="transferred"
+}

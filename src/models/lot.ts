@@ -2,6 +2,7 @@ import { Barn } from "./barn";
 import { Breed } from "./breed";
 import { Pen } from "./pen";
 import { Species } from "./species";
+import { Animal } from "./animal";
 
 export interface FecthLot {
   id: number;
@@ -20,6 +21,7 @@ export interface FecthLot {
   species?: Species;
   barn?: Barn;
   pen?:Pen;
+  animals:Animal
   
 
 }

@@ -13,10 +13,7 @@ import { Expense, Sale, SaleItem } from "../../models/gestionFinanciere";
 
 export const getAllExpenses = createAsyncThunk(
   "expense/list",
-  async (
-    args: { limit?: number; page?: number; farmId: number },
-    apiThunk
-  ) => {
+  async (args: { limit?: number; page?: number; farmId: number }, apiThunk) => {
     try {
       const params = new URLSearchParams();
       params.append("limit", args.limit?.toString() || "10");
@@ -27,15 +24,18 @@ export const getAllExpenses = createAsyncThunk(
       } else {
         return apiThunk.rejectWithValue("farmId obligatoire");
       }
-
       const result = await fetchWithAuth(
-        `${ROUTES.EXPENSE_LIST}?${params.toString()}`
+        `${ROUTES.EXPENSE_LIST}?${params.toString()}`,
       );
+      const error = handleApiResult(result, "Dépense introuvable");
+      if (error)
+        return apiThunk.rejectWithValue(extractApiError(error) as ApiError);
+
       return result;
     } catch (error) {
       return apiThunk.rejectWithValue(error);
     }
-  }
+  },
 );
 
 export const getExpenseById = createAsyncThunk<
@@ -116,10 +116,7 @@ export const deleteExpense = createAsyncThunk<
 
 export const getAllSales = createAsyncThunk(
   "sale/list",
-  async (
-    args: { limit?: number; page?: number; farmId: number },
-    apiThunk
-  ) => {
+  async (args: { limit?: number; page?: number; farmId: number }, apiThunk) => {
     try {
       const params = new URLSearchParams();
       params.append("limit", args.limit?.toString() || "10");
@@ -132,13 +129,13 @@ export const getAllSales = createAsyncThunk(
       }
 
       const result = await fetchWithAuth(
-        `${ROUTES.SALE_LIST}?${params.toString()}`
+        `${ROUTES.SALE_LIST}?${params.toString()}`,
       );
       return result;
     } catch (error) {
       return apiThunk.rejectWithValue(error);
     }
-  }
+  },
 );
 
 export const getSaleById = createAsyncThunk<
@@ -195,23 +192,22 @@ export const updateSale = createAsyncThunk<
   }
 });
 
-export const deleteSale = createAsyncThunk<
-  ApiResponse<null>,
-  number,
-  ThunkApi
->("sale/delete", async (id, apiThunk) => {
-  try {
-    const result = await fetchWithAuth(`${ROUTES.SALE_DELETE(id)}`, {
-      method: "DELETE",
-    });
-    const error = handleApiResult(result, "Erreur lors de la suppression");
-    if (error)
-      return apiThunk.rejectWithValue(extractApiError(error) as ApiError);
-    return result!;
-  } catch (err) {
-    return apiThunk.rejectWithValue(extractApiError(err));
-  }
-});
+export const deleteSale = createAsyncThunk<ApiResponse<null>, number, ThunkApi>(
+  "sale/delete",
+  async (id, apiThunk) => {
+    try {
+      const result = await fetchWithAuth(`${ROUTES.SALE_DELETE(id)}`, {
+        method: "DELETE",
+      });
+      const error = handleApiResult(result, "Erreur lors de la suppression");
+      if (error)
+        return apiThunk.rejectWithValue(extractApiError(error) as ApiError);
+      return result!;
+    } catch (err) {
+      return apiThunk.rejectWithValue(extractApiError(err));
+    }
+  },
+);
 
 // ─────────────────────────────────────────────
 //  SALE ITEMS
@@ -220,11 +216,11 @@ export const deleteSale = createAsyncThunk<
 export const getSaleItemsBySaleId = createAsyncThunk<
   ApiResponse<SaleItem[]>,
   number,
-  ThunkApi  
+  ThunkApi
 >("saleItem/listBySale", async (saleId, apiThunk) => {
   try {
     const result = await fetchWithAuth(
-      `${ROUTES.SALE_ITEM_LIST_BY_SALE}/${saleId}`
+      `${ROUTES.SALE_ITEM_LIST_BY_SALE}/${saleId}`,
     );
     const error = handleApiResult(result, "Éléments de vente introuvables");
     if (error)

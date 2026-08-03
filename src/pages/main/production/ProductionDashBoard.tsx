@@ -70,7 +70,7 @@ const DeleteModal: React.FC<{
         </div>
         <div>
           <h3 className="text-base font-bold text-gray-900">Supprimer cette production ?</h3>
-          <p className="text-sm text-gray-500">{production.Type} · {production.quantity} {production.unit}</p>
+          <p className="text-sm text-gray-500">{production.type} · {production.quantity} {production.unit}</p>
         </div>
       </div>
       <p className="text-sm text-gray-500 mb-5 bg-red-50 rounded-xl p-3 border border-red-100">
@@ -107,8 +107,8 @@ const ProductionFormModal: React.FC<{
   const [activeSection, setActiveSection] = useState<"base" | "origine">("base");
 
   const [form, setForm] = useState({
-    Category: initial?.Category || ("Product" as "Product" | "byproduct"),
-    Type: initial?.Type || "",
+    category: initial?.category || ("Product" as "Product" | "byproduct"),
+    type: initial?.type || "",
     quantity: initial?.quantity || ("" as any),
     unit: initial?.unit || "L",
     date: fmtDateInput(initial?.date),
@@ -122,7 +122,6 @@ const ProductionFormModal: React.FC<{
 
   const set = (key: string, value: any) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  // Options SelectInput dérivées des props
   const animalOptions = animals.map((a) => ({ value: String(a.id), label: a.name ?? `Animal #${a.id}` }));
   const lotOptions    = lots.map((l)    => ({ value: String(l.id), label: (l as any).name ?? `Lot #${l.id}` }));
   const herdOptions   = herds.map((h)   => ({ value: String(h.id), label: (h as any).name ?? `Troupeau #${h.id}` }));
@@ -131,13 +130,13 @@ const ProductionFormModal: React.FC<{
   const hasOrigine = form.lotId || form.animalId || form.herdId || form.penId;
 
   const handleSubmit = async () => {
-    if (!form.Type || !form.quantity || !form.unit || !form.date) return;
+    if (!form.type || !form.quantity || !form.unit || !form.date) return;
     setSaving(true);
     try {
       const payload: any = {
         farmId, userId,
-        Category: form.Category,
-        Type: form.Type,
+        category: form.category,
+        type: form.type,
         quantity: Number(form.quantity),
         unit: form.unit,
         date: form.date,
@@ -221,7 +220,7 @@ const ProductionFormModal: React.FC<{
                   {["Product", "byproduct"].map((cat) => (
                     <button key={cat} type="button" onClick={() => set("Category", cat)}
                       className={`flex-1 py-2 rounded-lg text-sm font-semibold transition ${
-                        form.Category === cat ? "bg-white text-vert shadow-sm" : "text-gray-500 hover:text-gray-700"
+                        form.category === cat ? "bg-white text-vert shadow-sm" : "text-gray-500 hover:text-gray-700"
                       }`}>
                       {cat === "Product" ? "Produit" : "Sous-produit"}
                     </button>
@@ -234,7 +233,7 @@ const ProductionFormModal: React.FC<{
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
                   Type <span className="text-red-400">*</span>
                 </label>
-                <input type="text" value={form.Type} onChange={(e) => set("Type", e.target.value)}
+                <input type="text" value={form.type} onChange={(e) => set("Type", e.target.value)}
                   placeholder="ex: Lait, Œufs, Viande..." className={inputClass} />
               </div>
 
@@ -445,7 +444,7 @@ const ProductionFormModal: React.FC<{
             </button>
           ) : (
             <button onClick={handleSubmit}
-              disabled={saving || !form.Type || !form.quantity || !form.date}
+              disabled={saving || !form.type || !form.quantity || !form.date}
               className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-vert text-white disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-dark_vert transition shadow-sm shadow-emerald-200">
               {saving ? <><Spinner /> Enregistrement…</> : initial ? "Enregistrer les modifications" : "Créer la production"}
             </button>
@@ -475,7 +474,7 @@ const StatCard: React.FC<{
 const TypeBar: React.FC<{ productions: FetchProduction[] }> = ({ productions }) => {
   const types = useMemo(() => {
     const map: Record<string, number> = {};
-    productions.forEach((p) => { map[p.Type] = (map[p.Type] || 0) + p.quantity; });
+    productions.forEach((p) => { map[p.type] = (map[p.type] || 0) + p.quantity; });
     const total = Object.values(map).reduce((s, v) => s + v, 0);
     return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 5)
       .map(([type, qty]) => ({ type, qty, pct: total > 0 ? (qty / total) * 100 : 0 }));
@@ -590,7 +589,7 @@ const ProductionTableau: React.FC = () => {
     setIsDeleting(true);
     try {
       await dispatch(deleteProduction(deleteTarget.id)).unwrap();
-      toast.success(`"${deleteTarget.Type}" supprimé avec succès`);
+      toast.success(`"${deleteTarget.type}" supprimé avec succès`);
       setDeleteTarget(null);
     } catch (err) {
       console.error(err);
@@ -600,7 +599,7 @@ const ProductionTableau: React.FC = () => {
     }
   };
 
-  const allTypes = useMemo(() => [...new Set(productions.map((p) => p.Type))], [productions]);
+  const allTypes = useMemo(() => [...new Set(productions.map((p) => p.type))], [productions]);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "desc" ? "asc" : "desc"));
@@ -613,12 +612,12 @@ const ProductionTableau: React.FC = () => {
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       list = list.filter((p) =>
-        [p.Type, p.animal?.name, p.lot?.name, p.herd?.name, p.pen?.name]
+        [p.type, p.animal?.name, p.lot?.name, p.herd?.name, p.pen?.name]
           .some((v) => v?.toLowerCase().includes(q))
       );
     }
-    if (filterCategory !== "all") list = list.filter((p) => p.Category === filterCategory);
-    if (filterType !== "all") list = list.filter((p) => p.Type === filterType);
+    if (filterCategory !== "all") list = list.filter((p) => p.category === filterCategory);
+    if (filterType !== "all") list = list.filter((p) => p.type === filterType);
     if (filterGrade !== "all") list = list.filter((p) => p.qualityGrade === filterGrade);
     if (dateFrom) list = list.filter((p) => p.date && p.date >= dateFrom);
     if (dateTo) list = list.filter((p) => p.date && p.date <= dateTo);
@@ -645,7 +644,7 @@ const ProductionTableau: React.FC = () => {
     const rows = [
       ["Date","Type","Catégorie","Quantité","Unité","Grade","Lot","Troupeau","Animal","Enclos","Notes"],
       ...filtered.map((p) => [
-        p.date||"", p.Type, p.Category, p.quantity, p.unit,
+        p.date||"", p.type, p.category, p.quantity, p.unit,
         p.qualityGrade||"", p.lot?.name||"", p.herd?.name||"",
         p.animal?.name||"", p.pen?.name||"", p.notes||"",
       ]),
@@ -705,7 +704,7 @@ const ProductionTableau: React.FC = () => {
             <StatCard label="Types distincts" value={allTypes.length} sub="types de production"
               icon={<BarChart3 className="w-5 h-5 text-jaune" />} bg="bg-yellow-50" />
             <StatCard label="Dernière entrée" value={productions[0] ? fmtDate(productions[0].date) : "—"}
-              sub={productions[0]?.Type || ""}
+              sub={productions[0]?.type || ""}
               icon={<Calendar className="w-5 h-5 text-amber-600" />} bg="bg-amber-50" />
           </div>
         )}
@@ -821,10 +820,10 @@ const ProductionTableau: React.FC = () => {
                 <div key={p.id}
                   className="grid grid-cols-[1fr_auto] md:grid-cols-[110px_1fr_105px_95px_110px_95px_110px_96px] gap-3 px-5 py-3.5 hover:bg-gray-50/70 transition items-center group">
                   <p className="text-xs text-gray-500">{fmtDate(p.date)}</p>
-                  <p className="font-semibold text-gray-800 text-sm">{p.Type}</p>
+                  <p className="font-semibold text-gray-800 text-sm">{p.type}</p>
                   <div className="hidden md:block">
-                    <span className={`inline-flex text-xs font-medium px-2 py-1 rounded-lg ${p.Category === "Product" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
-                      {categoryLabel(p.Category)}
+                    <span className={`inline-flex text-xs font-medium px-2 py-1 rounded-lg ${p.category === "Product" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
+                      {categoryLabel(p.category)}
                     </span>
                   </div>
                   <div className="hidden md:block">

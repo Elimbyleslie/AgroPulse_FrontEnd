@@ -15,7 +15,7 @@ import {
   ArrowDownRight,
 } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -61,7 +61,7 @@ const COLORS = {
   darkBleu: "#607FE2",
 };
 
-const CHART_COLORS = [
+const CHARt_COLORS = [
   COLORS.vert, COLORS.bleu, COLORS.jaune, COLORS.rouge,
   "#8B5CF6", "#F97316", "#06B6D4", "#EC4899",
 ];
@@ -184,29 +184,29 @@ function groupByMonth(prods: FetchProduction[]): { labels: string[]; data: numbe
 
 function groupByType(prods: FetchProduction[]): { labels: string[]; data: number[]; colors: string[] } {
   const map: Record<string, number> = {};
-  prods.forEach((p) => { map[p.Type] = (map[p.Type] || 0) + p.quantity; });
+  prods.forEach((p) => { map[p.type] = (map[p.type] || 0) + p.quantity; });
   const sorted = Object.entries(map).sort((a, b) => b[1] - a[1]);
   return {
     labels: sorted.map(([k]) => k),
     data: sorted.map(([, v]) => v),
-    colors: sorted.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]),
+    colors: sorted.map((_, i) => CHARt_COLORS[i % CHARt_COLORS.length]),
   };
 }
 
-function groupByTypePerMonth(prods: FetchProduction[]): {
+function groupBytypePerMonth(prods: FetchProduction[]): {
   months: string[]; types: string[]; datasets: { type: string; data: number[]; color: string }[]
 } {
   const months = [...new Set(prods.map((p) => p.date?.slice(0, 7)).filter(Boolean))].sort() as string[];
-  const types = [...new Set(prods.map((p) => p.Type))];
+  const types = [...new Set(prods.map((p) => p.type))];
   const monthLabels = months.map((k) => {
     const [y, m] = k.split("-");
     return new Date(Number(y), Number(m) - 1).toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
   });
   const datasets = types.map((type, i) => ({
     type,
-    color: CHART_COLORS[i % CHART_COLORS.length],
+    color: CHARt_COLORS[i % CHARt_COLORS.length],
     data: months.map((month) =>
-      prods.filter((p) => p.Type === type && p.date?.startsWith(month)).reduce((s, p) => s + p.quantity, 0)
+      prods.filter((p) => p.type === type && p.date?.startsWith(month)).reduce((s, p) => s + p.quantity, 0)
     ),
   }));
   return { months: monthLabels, types, datasets };
@@ -229,7 +229,7 @@ const ProductionCurves: React.FC = () => {
 
   const farmId = currentFarm?.id;
   const [period, setPeriod] = useState<Period>("30d");
-  const [timeGranularity, setTimeGranularity] = useState<"day" | "week" | "month">("day");
+  const [timeGranularity, settimeGranularity] = useState<"day" | "week" | "month">("day");
 
   useEffect(() => {
     if (!farmId && currentUser?.id) dispatch(getUserFarms());
@@ -259,13 +259,13 @@ const ProductionCurves: React.FC = () => {
   }, [filtered, timeGranularity]);
 
   const typeData = useMemo(() => groupByType(filtered), [filtered]);
-  const typePerMonth = useMemo(() => groupByTypePerMonth(filtered), [filtered]);
+  const typePerMonth = useMemo(() => groupBytypePerMonth(filtered), [filtered]);
   const grades = useMemo(() => gradeDistribution(filtered), [filtered]);
 
   const totalFiltered = filtered.reduce((s, p) => s + p.quantity, 0);
   const avgPerDay = timeSeries.data.length > 0 ? totalFiltered / timeSeries.data.length : 0;
   const maxDay = timeSeries.data.length > 0 ? Math.max(...timeSeries.data) : 0;
-  const allTypes = [...new Set(productions.map((p) => p.Type))];
+  const alltypes = [...new Set(productions.map((p) => p.type))];
 
   // Comparaison période courante vs précédente
   const prevFiltered = useMemo(() => {
@@ -276,8 +276,8 @@ const ProductionCurves: React.FC = () => {
     const to = new Date(now.getTime() - days * 86400000);
     return productions.filter((p) => p.date && new Date(p.date) >= from && new Date(p.date) < to);
   }, [productions, period]);
-  const prevTotal = prevFiltered.reduce((s, p) => s + p.quantity, 0);
-  const growthPct = prevTotal > 0 ? ((totalFiltered - prevTotal) / prevTotal) * 100 : null;
+  const prevtotal = prevFiltered.reduce((s, p) => s + p.quantity, 0);
+  const growthPct = prevtotal > 0 ? ((totalFiltered - prevtotal) / prevtotal) * 100 : null;
 
   const chartDefaults = {
     responsive: true,
@@ -304,7 +304,7 @@ const ProductionCurves: React.FC = () => {
               <ChevronRight className="w-3 h-3" />
               <span className="text-gray-600 font-medium">Courbes & Statistiques</span>
             </div>
-            <h1 className="text-2xl font-black text-darkText tracking-tight">Courbes & Statistiques</h1>
+            <h1 className="text-2xl font-black text-darktext tracking-tight">Courbes & Statistiques</h1>
             <p className="text-sm text-gray-400 mt-0.5">Visualisation temporelle et analyse statistique</p>
           </div>
           <button onClick={refresh} className="p-2.5 rounded-xl hover:bg-white border border-transparent hover:border-gray-200 text-gray-500 transition">
@@ -315,7 +315,7 @@ const ProductionCurves: React.FC = () => {
         {/* ── Sélecteur de période ── */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Période :</span>
-          {([["7d", "7 jours"], ["30d", "30 jours"], ["90d", "3 mois"], ["1y", "1 an"], ["all", "Tout"]] as [Period, string][]).map(([p, l]) => (
+          {([["7d", "7 jours"], ["30d", "30 jours"], ["90d", "3 mois"], ["1y", "1 an"], ["all", "tout"]] as [Period, string][]).map(([p, l]) => (
             <PeriodBtn key={p} active={period === p} label={l} onClick={() => setPeriod(p)} />
           ))}
         </div>
@@ -330,7 +330,7 @@ const ProductionCurves: React.FC = () => {
             icon={<BarChart3 className="w-5 h-5 text-bleu" />} bg="bg-blue-50" />
           <KpiCard label="Pic de production" value={fmtNum(maxDay)} sub="meilleure période"
             icon={<Calendar className="w-5 h-5 text-jaune" />} bg="bg-yellow-50" />
-          <KpiCard label="Types suivis" value={allTypes.length} sub="types distincts"
+          <KpiCard label="types suivis" value={alltypes.length} sub="types distincts"
             icon={<Layers className="w-5 h-5 text-amber-500" />} bg="bg-amber-50" />
         </div>
 
@@ -356,7 +356,7 @@ const ProductionCurves: React.FC = () => {
               {/* Granularité */}
               <div className="flex items-center gap-2 mb-4">
                 {([["day", "Jour"], ["week", "Semaine"], ["month", "Mois"]] as const).map(([g, l]) => (
-                  <button key={g} onClick={() => setTimeGranularity(g)}
+                  <button key={g} onClick={() => settimeGranularity(g)}
                     className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${timeGranularity === g ? "bg-vert text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200"}`}>
                     {l}
                   </button>
@@ -562,14 +562,14 @@ const ProductionCurves: React.FC = () => {
                 </div>
                 <div className="divide-y divide-gray-50">
                   {stats.groupedStats.map((s, i) => {
-                    const color = CHART_COLORS[i % CHART_COLORS.length];
+                    const color = CHARt_COLORS[i % CHARt_COLORS.length];
                     const maxSum = Math.max(...stats.groupedStats.map((x) => x._sum.quantity || 0), 1);
                     return (
-                      <div key={`${s.Type}-${i}`} className="grid grid-cols-[1fr_100px_100px_100px_80px] gap-3 px-5 py-3.5 hover:bg-gray-50/70 transition items-center">
+                      <div key={`${s.type}-${i}`} className="grid grid-cols-[1fr_100px_100px_100px_80px] gap-3 px-5 py-3.5 hover:bg-gray-50/70 transition items-center">
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <div className="w-2.5 h-2.5 rounded-sm" style={{ background: color }} />
-                            <p className="font-semibold text-gray-800 text-sm">{s.Type}</p>
+                            <p className="font-semibold text-gray-800 text-sm">{s.type}</p>
                           </div>
                           <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                             <div className="h-full rounded-full transition-all" style={{ width: `${((s._sum.quantity || 0) / maxSum) * 100}%`, background: color }} />
@@ -588,8 +588,8 @@ const ProductionCurves: React.FC = () => {
                           <p className="text-xs text-gray-400">entrées</p>
                         </div>
                         <div>
-                          <span className={`text-xs font-medium px-2 py-1 rounded-lg ${s.Category === "Product" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
-                            {s.Category === "Product" ? "Produit" : "S-produit"}
+                          <span className={`text-xs font-medium px-2 py-1 rounded-lg ${s.category === "Product" ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
+                            {s.category === "Product" ? "Produit" : "S-produit"}
                           </span>
                         </div>
                       </div>
@@ -598,7 +598,7 @@ const ProductionCurves: React.FC = () => {
                 </div>
                 <div className="px-5 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
                   <p className="text-xs text-gray-400">{stats.groupedStats.length} type{stats.groupedStats.length > 1 ? "s" : ""} analysé{stats.groupedStats.length > 1 ? "s" : ""}</p>
-                  <p className="text-xs text-gray-400">Total global : <span className="font-semibold text-gray-600">{fmtNum(stats.total.totalQuantity)}</span></p>
+                  <p className="text-xs text-gray-400">total global : <span className="font-semibold text-gray-600">{fmtNum(stats.total.totalQuantity)}</span></p>
                 </div>
               </div>
             )}
