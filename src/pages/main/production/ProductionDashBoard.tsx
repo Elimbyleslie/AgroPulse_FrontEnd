@@ -218,7 +218,7 @@ const ProductionFormModal: React.FC<{
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Catégorie</label>
                 <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
                   {["Product", "byproduct"].map((cat) => (
-                    <button key={cat} type="button" onClick={() => set("Category", cat)}
+                    <button key={cat} type="button" onClick={() => set("category", cat)}
                       className={`flex-1 py-2 rounded-lg text-sm font-semibold transition ${
                         form.category === cat ? "bg-white text-vert shadow-sm" : "text-gray-500 hover:text-gray-700"
                       }`}>
@@ -233,7 +233,7 @@ const ProductionFormModal: React.FC<{
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
                   Type <span className="text-red-400">*</span>
                 </label>
-                <input type="text" value={form.type} onChange={(e) => set("Type", e.target.value)}
+                <input type="text" value={form.type} onChange={(e) => set("type", e.target.value)}
                   placeholder="ex: Lait, Œufs, Viande..." className={inputClass} />
               </div>
 

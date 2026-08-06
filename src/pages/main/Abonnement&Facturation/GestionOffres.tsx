@@ -1,16 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import type { AppDispatch, RootState } from "../../../store"; // ⚠️ adapter le chemin selon l'emplacement réel du fichier
+import type { AppDispatch, RootState } from "../../../store";  
 import {
   fetchPlans,
   deletePlan,
-} from "../../../store/Abonnement&Facturation/action"; // ⚠️ idem
+} from "../../../store/Abonnement&Facturation/action"; 
 import {
   selectPlans,
   selectPlansPagination,
   selectSubscriptionState,
-} from "../../../store/Abonnement&Facturation/slice"; // ⚠️ idem
-import { Plan, BillingCycle } from "../../../models/abonnementFacturation"; // ⚠️ idem
+} from "../../../store/Abonnement&Facturation/slice"; 
+import { Plan, BillingCycle, UnitStorage } from "../../../models/abonnementFacturation"; 
 import {
   Plus,
   Pencil,
@@ -26,6 +26,7 @@ import {
   PawPrint,
   Clock,
   Wallet,
+  Warehouse,
 } from "lucide-react";
 import PlanFormModal from "../../../components/Modal/PlanFormModal";
 import { toast } from "react-toastify";
@@ -63,6 +64,12 @@ const CYCLE_LABEL: Record<BillingCycle, string> = {
 const CYCLE_ICON: Record<BillingCycle, React.ElementType> = {
   [BillingCycle.MONTHLY]: Clock,
   [BillingCycle.YEARLY]: Wallet,
+};
+
+const UNIT_LABEL: Record<UnitStorage, string> = {
+  [UnitStorage.MO]: "Mo",
+  [UnitStorage.GO]: "Go",
+  [UnitStorage.TO]: "To",
 };
 
 // Palette tournante utilisant les couleurs de la charte : chaque plan reçoit
@@ -214,7 +221,7 @@ const DetailModal: React.FC<{
               <div className="flex items-center gap-1.5">
                 <HardDrive className="w-3.5 h-3.5 text-text" />
                 <p className="text-sm font-semibold text-darkText">
-                  {plan.storageLimit} Mo
+                  {plan.storageLimit} {UNIT_LABEL[plan.unitStorage]}
                 </p>
               </div>
             </div>
@@ -226,6 +233,17 @@ const DetailModal: React.FC<{
                 <PawPrint className="w-3.5 h-3.5 text-text" />
                 <p className="text-sm font-semibold text-darkText">
                   {plan.animalLimit}
+                </p>
+              </div>
+            </div>
+            <div className="bg-bg_dash rounded-xl p-3 col-span-2">
+              <p className="text-xs font-black text-text uppercase mb-0.5">
+                Fermes
+              </p>
+              <div className="flex items-center gap-1.5">
+                <Warehouse className="w-3.5 h-3.5 text-text" />
+                <p className="text-sm font-semibold text-darkText">
+                  {plan.farmLimit}
                 </p>
               </div>
             </div>
@@ -470,7 +488,7 @@ const GestionOffres: React.FC = () => {
               scroll horizontal en secours, et bascule complète en cartes sous "md". */}
           <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-btn/30 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[640px]">
+              <table className="w-full min-w-[720px]">
                 <thead>
                   <tr className="bg-bg_dash border-b border-btn/30">
                     <th className="text-left px-4 py-3 text-xs font-black text-text uppercase tracking-wide">
@@ -493,6 +511,9 @@ const GestionOffres: React.FC = () => {
                     </th>
                     <th className="hidden xl:table-cell text-left px-4 py-3 text-xs font-black text-text uppercase tracking-wide">
                       Animaux
+                    </th>
+                    <th className="hidden xl:table-cell text-left px-4 py-3 text-xs font-black text-text uppercase tracking-wide">
+                      Fermes
                     </th>
                     <th className="text-right px-4 py-3 text-xs font-black text-text uppercase tracking-wide">
                       Actions
@@ -546,10 +567,13 @@ const GestionOffres: React.FC = () => {
                           {plan.userLimit}
                         </td>
                         <td className="hidden xl:table-cell px-4 py-3 text-sm text-text">
-                          {plan.storageLimit} Mo
+                          {plan.storageLimit} {UNIT_LABEL[plan.unitStorage]}
                         </td>
                         <td className="hidden xl:table-cell px-4 py-3 text-sm text-text">
                           {plan.animalLimit}
+                        </td>
+                        <td className="hidden xl:table-cell px-4 py-3 text-sm text-text">
+                          {plan.farmLimit}
                         </td>
                         <td
                           className="px-4 py-3"
@@ -617,8 +641,11 @@ const GestionOffres: React.FC = () => {
                         <span className={`font-semibold ${accent.text}`}>
                           {formatPrice(plan.price)}
                         </span>{" "}
-                        · {plan.durationDays} j · {plan.userLimit} util. ·{" "}
-                        {plan.storageLimit} Mo · {plan.animalLimit} animaux
+                        · {plan.durationDays} j · {plan.userLimit} util.
+                      </p>
+                      <p className="text-xs text-text mt-0.5">
+                        {plan.storageLimit} {UNIT_LABEL[plan.unitStorage]} ·{" "}
+                        {plan.animalLimit} animaux · {plan.farmLimit} fermes
                       </p>
                     </div>
                     <div

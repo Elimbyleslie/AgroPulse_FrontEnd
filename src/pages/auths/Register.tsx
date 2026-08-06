@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { Formik, Form, FormikHelpers } from "formik";
 import * as Yup from "yup";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../../hooks/store";
 import { register } from "../../store/auth/action";
 import {
@@ -10,6 +10,11 @@ import {
   selectAuthStatus,
   selectAuthError,
 } from "../../store/auth/slice";
+import { validateInvitation } from "../../store/administration/inviteAction";
+import {
+  selectInvitationValidation,
+  selectInvitationValidateState,
+} from "../../store/administration/inviteSlice";
 import Input from "../../components/UI/Input";
 import PasswordInput from "../../components/UI/PasswordInput";
 import PhoneInput from '../../components/UI/PhoneInput'
@@ -19,16 +24,26 @@ import { UserRegisterForm } from "../../models/user";
 import { toast } from "react-toastify";
 import { ApiError, LoadingType } from "../../models/store";
 import GoogleLoginButton from "../../components/UI/GoogleLoginButton";
+import { Building2, MapPin, AlertTriangle } from "lucide-react";
 
 const Register: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const invitationToken = searchParams.get("token") || undefined;
 
-  //  Utilisation des bons sélecteurs
   const authStatus = useAppSelector(selectAuthStatus);
   const authError = useAppSelector(selectAuthError);
+  const invitationInfo = useAppSelector(selectInvitationValidation);
+  const invitationState = useAppSelector(selectInvitationValidateState);
 
-  // Nettoyage des erreurs au démontage
+  // Valider le token d'invitation dès l'arrivée sur la page
+  useEffect(() => {
+    if (invitationToken) {
+      dispatch(validateInvitation(invitationToken));
+    }
+  }, [dispatch, invitationToken]);
+
   useEffect(() => {
     return () => {
       dispatch(clearAuthError());
@@ -42,7 +57,10 @@ const Register: React.FC = () => {
   ) => {
     try {
       dispatch(clearAuthError());
-      await dispatch(register(values)).unwrap();
+      const payload = invitationToken
+        ? { ...values, invitationToken }
+        : values;
+      await dispatch(register(payload)).unwrap();
       toast.success("Inscription réussie ! Vérifiez votre email.");
       navigate(PATH_AUTH.VERIFY_EMAIL_OTP, {
         replace: true,
@@ -51,7 +69,6 @@ const Register: React.FC = () => {
     } catch (err: unknown) {
       const error = err as ApiError;
 
-      // 🔴 EMAIL DÉJÀ UTILISÉ
       if (error.meta?.status === 409) {
         setErrors({
           email: "Cet email est déjà utilisé",
@@ -59,7 +76,6 @@ const Register: React.FC = () => {
         return;
       }
 
-      // 🔴 USERNAME DÉJÀ UTILISÉ
       if (error.meta?.status === 400 && error.meta?.message?.includes("username")) {
         setErrors({
           userName: "Ce nom d'utilisateur est déjà pris",
@@ -67,13 +83,11 @@ const Register: React.FC = () => {
         return;
       }
 
-      // 🔴 ERREURS DE VALIDATION
       if (error.meta?.status === 400 && error.error) {
         setErrors(error.error);
         return;
       }
 
-      // 🔴 AUTRES ERREURS
       toast.error(error.meta?.message || "Une erreur est survenue");
     } finally {
       setSubmitting(false);
@@ -82,7 +96,9 @@ const Register: React.FC = () => {
 
   const handleGoogleLogin = () => {
     try {
-      const googleAuthUrl = `${import.meta.env.VITE_API_URL}${PATH_AUTH.GOOGLE}`;
+      const googleAuthUrl = `${import.meta.env.VITE_API_URL}${PATH_AUTH.GOOGLE}${
+        invitationToken ? `?token=${invitationToken}` : ""
+      }`;
 
       if (!import.meta.env.VITE_API_URL) {
         toast.error("Configuration de l'authentification Google manquante");
@@ -125,15 +141,17 @@ const Register: React.FC = () => {
     passwordConfirmation: Yup.string()
       .required("Confirmation du mot de passe requise")
       .oneOf([Yup.ref("password")], "Les mots de passe ne correspondent pas"),
-     
   });
 
-  // ✅ Utilisation de LoadingType.PENDING
   const isLoading = authStatus === LoadingType.PENDING;
+  const isInvitationInvalid =
+    invitationToken &&
+    invitationState.error &&
+    !invitationState.loading;
 
   return (
     <div className="flex h-screen w-full bg-white text-gray-900 ">
-     
+
       <div
         className="hidden md:flex w-1/2 bg-cover h-full bg-center relative"
         style={{
@@ -157,7 +175,40 @@ const Register: React.FC = () => {
             Inscrivez-vous sur <span>Agro</span><span>Pulse</span>
           </h1>
 
-          <Formik<UserRegisterForm> 
+          {/* 🔗 Bandeau d'invitation */}
+          {invitationToken && invitationState.loading && (
+            <div className="mb-4 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-500">
+              Vérification du lien d'invitation…
+            </div>
+          )}
+
+          {invitationInfo && !invitationState.loading && !invitationState.error && (
+            <div className="mb-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-vert space-y-1">
+              <div className="flex items-center gap-2 font-semibold">
+                <Building2 className="w-4 h-4" />
+                Vous rejoignez {invitationInfo.organizationName}
+              </div>
+              {invitationInfo.farmName && (
+                <div className="flex items-center gap-2 text-emerald-700">
+                  <MapPin className="w-4 h-4" />
+                  Ferme : {invitationInfo.farmName}
+                </div>
+              )}
+            </div>
+          )}
+
+          {isInvitationInvalid && (
+            <div className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-rouge flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span>
+                {invitationState.error?.meta?.message ||
+                  "Ce lien d'invitation est invalide ou a expiré."}{" "}
+                Vous pouvez tout de même créer un compte indépendant.
+              </span>
+            </div>
+          )}
+
+          <Formik<UserRegisterForm>
             initialValues={{
               name: "",
               userName: "",
@@ -198,7 +249,7 @@ const Register: React.FC = () => {
                   name="phone"
                   placeholder="Numéro de téléphone"
                   disabled={isLoading || isSubmitting}
-                  
+
                 />
 
                 <PasswordInput
@@ -215,7 +266,6 @@ const Register: React.FC = () => {
                   autoComplete="new-password"
                 />
 
-                {/* ✅ Affichage conditionnel de l'erreur */}
                 {authError && (
                   <div className="w-full text-red-600 text-sm text-center">
                     {authError.meta?.message || "Une erreur est survenue"}

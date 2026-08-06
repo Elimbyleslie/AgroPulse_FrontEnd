@@ -344,6 +344,7 @@ const PurchaseFormModal: React.FC<{
 }> = ({ farmId, suppliers, initial, onClose, onSuccess }) => {
   const dispatch = useAppDispatch();
   const [saving, setSaving] = useState(false);
+  
   const [form, setForm] = useState({
     supplierId: initial?.supplierId ? String(initial.supplierId) : "",
     totalAmount: initial?.totalAmount ?? "",
@@ -663,13 +664,21 @@ const PurchasesSuppliersDashboard: React.FC = () => {
     return list;
   }, [purchases, suppliers, searchTerm, filterStatus]);
 
-  const filteredSuppliers = useMemo(() => {
-    if (!searchTerm) return suppliers;
-    const q = searchTerm.toLowerCase();
-    return suppliers.filter((s) =>
-      [s.name, s.email, s.phone].some((v) => v?.toLowerCase().includes(q)),
-    );
-  }, [suppliers, searchTerm]);
+ const filteredSuppliers = useMemo(() => {
+  const list = Array.isArray(suppliers)
+    ? suppliers.filter((s): s is Supplier => !!s && typeof s === "object")
+    : [];
+
+  if (!searchTerm.trim()) return list;
+
+  const q = searchTerm.toLowerCase().trim();
+
+  return list.filter((s) =>
+    [s.name, s.email, s.phone].some(
+      (v) => typeof v === "string" && v.toLowerCase().includes(q),
+    ),
+  );
+}, [suppliers, searchTerm]);
 
   const totalSpent = purchases
     .filter((p) => p.status === "RECEIVED")

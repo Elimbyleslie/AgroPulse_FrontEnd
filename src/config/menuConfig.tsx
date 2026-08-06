@@ -19,27 +19,51 @@ import {
   QrCode,
   Users,
   Truck,
-  LineChart
+  LineChart,
+  Shield,
+  Building2,
+  
+  ClipboardList,
+  UserPlus
 } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 
+// ⚠️ `roles` est déclaratif seulement : il ne filtre rien tant que le composant
+// qui consomme `menuItems` (la sidebar) ne l'utilise pas pour exclure les entrées
+// que l'utilisateur courant n'a pas le droit de voir. Sans ce filtrage, ces liens
+// restent visibles à tout le monde même si les pages elles-mêmes se protègent.
+// Valeurs attendues : "SUPER_ADMIN" | "ORG_OWNER" | "FARM_MANAGER" (adapter aux
+// noms de rôles réels côté backend). Absence de `roles` = visible à tous.
 export interface SubMenuItem {
   label: string;
   path: string;
   icon?: LucideIcon;
+  roles?: string[];
 }
 
 export interface MenuItem {
   label: string;
   path: string;
   icon: LucideIcon;
+  roles?: string[];
   subItems?: SubMenuItem[];
 }
 export const menuItems: MenuItem[] = [
+  
   {
     label: "Tableau de Bord",
     path: "/main/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    label: "Tâches & Planification",
+    path: "/main/tasks",
+    icon: ClipboardList,
+    subItems: [
+      { label: "Toutes les Tâches", path: "/main/tasks", icon: ClipboardList },
+      { label: "Attribuer une Tâche", path: "/main/tasks/assign", icon: UserPlus, roles: ["ORG_OWNER", "FARM_MANAGER"] },
+      { label: "Calendrier des Tâches", path: "/main/tasks/calendar", icon: CalendarDays },
+    ],
   },
   {
     label: "Gestion du Cheptel",
@@ -123,17 +147,30 @@ export const menuItems: MenuItem[] = [
     subItems: [
       { label: "Mon Abonnement", path: "/main/subscription", icon: TrendingUp },
       { label: "Historique des Paiements", path: "/main/subscription/payments", icon: DollarSign },
-      { label: "Gestion des Offres", path: "/main/subscription/plans", icon: Package }, // Admin only
+      { label: "Gestion des Offres", path: "/main/subscription/plans", icon: Package, roles: ["SUPER_ADMIN"] },
     ],
   },
 
   {
-    label: "Administration",
-    path: "/main/admin",
-    icon: UserCog,
+    label: "Mon Organisation",
+    path: "/main/organization",
+    icon: Building2,
+    roles: ["ORG_OWNER", "FARM_MANAGER"],
     subItems: [
-      { label: "Gestion Utilisateurs", path: "/main/admin/users", icon: UserCog },
-      { label: "Paramètres Système", path: "/main/admin/settings", icon: Settings },
+      { label: "Détails de l'Organisation", path: "/main/organization", icon: Building2 },
+      { label: "Paramètres ", path: "/main/organisation/settings", icon: Settings },
+
     ],
   },
+
+ {
+  label: "Administration",
+  path: "/main/admin",
+  icon: UserCog,
+  roles: ["SUPER_ADMIN"],
+  subItems: [
+    { label: "Gestion Utilisateurs", path: "/main/admin/users", icon: UserCog },
+    { label: "Rôles & Permissions", path: "/main/admin/roles", icon: Shield },
+  ],
+}
 ];
