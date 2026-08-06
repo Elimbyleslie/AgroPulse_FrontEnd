@@ -9,6 +9,13 @@ export enum RenewalType {
   MANUAL = "MANUAL",
 }
 
+
+export enum UnitStorage {
+  MO = "MO",
+  GO = "GO",
+  TO = "TO",
+}
+
 export interface Subscription {
   id: number;
   organizationId: number;
@@ -34,6 +41,9 @@ export interface Plan {
   userLimit: number;
   storageLimit: number;
   animalLimit: number;
+  farmLimit:number;
+  unitStorage:UnitStorage;
+
 }
 
 export interface SubscriptionWithPlan extends Subscription {

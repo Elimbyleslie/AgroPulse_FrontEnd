@@ -1,5 +1,6 @@
 import { BaseEntity } from "./base";
 import { organizationRes } from "./organization";
+
 export interface User extends BaseEntity {
   id: number;
   name: string;
@@ -12,8 +13,11 @@ export interface User extends BaseEntity {
   defaulFarmId?: number;
   defaulOrganizationId?: number;
   onboardingComplete?: boolean;
+  lastConnexion: string | Date;
+  status: "active" | "inactive";
+  invitationToken?: string;
+  
 }
-
 
 export interface AuthUser {
   id: number;
@@ -28,8 +32,8 @@ export interface AuthUser {
   permissions: string[];
    ownedOrganizations?: organizationRes[];  // Ajouté
   memberOrganizations?: organizationRes[]; // Ajouté
-  defaulFarmId?: number;
-  defaulOrganizationId?: number;
+  defaultFarmId?: number;
+  defaultOrganizationId?: number;
   onboardingComplete?: boolean;
 } 
 
@@ -49,6 +53,7 @@ export interface UserRegisterForm {
   photo?: string;
   defaulFarmId?: number;
   defaulOrganizationId?: number;
+  invitationToken?: string;
 }
 
 export interface UpdatePasswordForm {

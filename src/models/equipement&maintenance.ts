@@ -10,10 +10,12 @@ export interface Equipement {
   maintenanceFrequency?: MaintenanceFrequency;
 }
 
-enum EquipmentStatus {
-  OPERATIONAL = "OPERATIONAL",
-  UNDER_MAINTENANCE = "UNDER_MAINTENANCE",
-  OUT_OF_SERVICE = "OUT_OF_SERVICE",
+
+
+export enum EquipmentStatus {
+  operational = "operational",
+  underMaintenance = "underMaintenance",
+  outOfService = "outOfService",
 }
 
 

@@ -356,6 +356,8 @@ export const {
 export const selectAuthenticatedUser = (state: RootState) =>
   state.authentification.auth;
 
+export const selectCurrentUser = (state: RootState) =>
+  state.authentification.auth.user;
 export const selectIsAuthenticated = (state: RootState) =>
   !!state.authentification.auth.token && !!state.authentification.auth.user;
 
@@ -369,7 +371,7 @@ export const selectUserId = (state: RootState) =>
   state.authentification.auth.user?.id;
 export const selectManagerId = selectUserId;
 
-export const selectCurrentUser = (state: RootState) =>
+export const selectUserOrganizations = (state: RootState) =>
   state.authentification.auth.user?.ownedOrganizations ||
   state.authentification.auth.user?.memberOrganizations;
 

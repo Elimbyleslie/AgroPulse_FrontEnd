@@ -54,6 +54,8 @@ const OrganizationSlice = createSlice({
     },
     clearCurrentOrganization: (state) => {
       state.currentOrganization.entity = null;
+      state.currentOrganization.status = LoadingType.IDLE;
+      state.currentOrganization.error = null;
     },
   },
   extraReducers: (builder) => {
@@ -76,10 +78,21 @@ const OrganizationSlice = createSlice({
       });
 
     // 📌 FETCH BY ID
+    // Manquait pending/rejected : un échec (401/404/etc.) laissait `status` figé
+    // à IDLE et `entity` à null indéfiniment — indistinguable d'un chargement en
+    // cours côté UI, d'où le spinner infini.
     builder
+      .addCase(fetchWithAuthOrganizationById.pending, (state) => {
+        state.currentOrganization.status = LoadingType.PENDING;
+        state.currentOrganization.error = null;
+      })
       .addCase(fetchWithAuthOrganizationById.fulfilled, (state, { payload }) => {
         state.currentOrganization.status = LoadingType.SUCCESS;
         state.currentOrganization.entity = payload.data || payload;
+      })
+      .addCase(fetchWithAuthOrganizationById.rejected, (state, { payload }) => {
+        state.currentOrganization.status = LoadingType.REJECTED;
+        state.currentOrganization.error = payload as ApiError;
       });
 
     // ➕ CREATE
@@ -117,4 +130,6 @@ export const selectOrganizations = (state: RootState) => state.organizations.org
 export const selectOrganizationsStatus = (state: RootState) => state.organizations.organizationList.status;
 export const selectCreateOrganizationStatus = (state: RootState) => state.organizations.createOrganization.status;
 export const selectCurrentOrganization = (state: RootState) => state.organizations.currentOrganization.entity;
+export const selectCurrentOrganizationStatus = (state: RootState) => state.organizations.currentOrganization.status;
+export const selectCurrentOrganizationError = (state: RootState) => state.organizations.currentOrganization.error;
 export default OrganizationSlice;

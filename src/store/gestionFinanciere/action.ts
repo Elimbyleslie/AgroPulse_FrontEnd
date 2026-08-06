@@ -220,7 +220,7 @@ export const getSaleItemsBySaleId = createAsyncThunk<
 >("saleItem/listBySale", async (saleId, apiThunk) => {
   try {
     const result = await fetchWithAuth(
-      `${ROUTES.SALE_ITEM_LIST_BY_SALE}/${saleId}`,
+      ROUTES.SALE_ITEM_LIST_BY_SALE(saleId),  
     );
     const error = handleApiResult(result, "Éléments de vente introuvables");
     if (error)

@@ -67,7 +67,9 @@ export const fetchWithAuth = async (
     };
   }
 
-  // 4️⃣ SUCCÈS
-  // Si data est null (ex: 204 No Content), on renvoie un objet vide pour ne pas faire planter Redux
+// 4️⃣ SUCCÈS
+if (!data) return { meta: { status: response.status, message: "OK" } };
+if (!data.meta) data.meta = { status: response.status, message: "OK" };
+return data;
   return data || {};
 };

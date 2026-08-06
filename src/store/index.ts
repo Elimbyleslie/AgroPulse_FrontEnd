@@ -26,7 +26,11 @@ import feedStockSlice from "./alimentations/sliceStock";
 import subscriptionSlice from "./Abonnement&Facturation/slice";
 import paymentSlice from "./Abonnement&Facturation/historySlice";
 import invoiceSlice from "./Abonnement&Facturation/sliceInvoice";
-
+import rbacSlice from "./Role&Permission/slice";
+import adminSlice from "./administration/slice";
+import userSlice from "./auth/userSlice";
+import settingsSlice from "./administration/sliceSetting";
+import invitationSlice from "./administration/inviteSlice";
 
 const rootReducer = combineReducers({   
   [AuthSlice.name]: AuthSlice.reducer,
@@ -56,6 +60,11 @@ const rootReducer = combineReducers({
   [subscriptionSlice.name]: subscriptionSlice.reducer,
   [paymentSlice.name]: paymentSlice.reducer,
   [invoiceSlice.name]: invoiceSlice.reducer,
+  [rbacSlice.name]: rbacSlice.reducer,
+  [adminSlice.name]: adminSlice.reducer,
+  [userSlice.name]: userSlice.reducer,
+  [settingsSlice.name]: settingsSlice.reducer,
+  [invitationSlice.name]:invitationSlice.reducer,
 });
 
 export const store = configureStore({
