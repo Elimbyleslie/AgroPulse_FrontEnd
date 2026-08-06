@@ -16,6 +16,7 @@ import { Pen } from '../../../models/pen';
 interface PenFormProps {
   farmId: number;
   pen?: Pen | null;
+  barnId:number
   onSuccess: () => void;
 }
 
@@ -32,7 +33,7 @@ const validationSchema = Yup.object({
     .integer('La capacité doit être un nombre entier'),
 });
 
-const PenForm: React.FC<PenFormProps> = ({ farmId, pen, onSuccess }) => {
+const PenForm: React.FC<PenFormProps> = ({ farmId, pen,barnId , onSuccess }) => {
   const dispatch = useAppDispatch();
   const { entities: barns, isLoading: loadingBarns } = useAppSelector((state) => state.barn);
 

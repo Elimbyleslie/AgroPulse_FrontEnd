@@ -14,6 +14,7 @@ import {
   Repeat,
   Ban,
   Sparkles,
+  Warehouse,
 } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -34,6 +35,7 @@ import {
   Plan,
   RenewalType,
   SubscriptionStatus,
+  UnitStorage,
 } from "../../../models/abonnementFacturation";
 const useOrganizationId = (): number | undefined => {
     const organizationId =useAppSelector((state)=>state.authentification.auth.user?.ownedOrganizations?.at(0)?.id);
@@ -97,6 +99,12 @@ const statusConfig: Record<
 const billingCycleLabels: Record<string, string> = {
   MONTHLY: "Mensuel",
   YEARLY: "Annuel",
+};
+
+const UNIT_LABEL: Record<UnitStorage, string> = {
+  [UnitStorage.MO]: "Mo",
+  [UnitStorage.GO]: "Go",
+  [UnitStorage.TO]: "To",
 };
 
 const CancelModal: React.FC<{
@@ -193,6 +201,47 @@ const ChangePlanModal: React.FC<{
             </div>
             <p className="text-xs text-gray-500">{plan.description}</p>
           </div>
+
+          {/* Récap des caractéristiques du plan avant confirmation */}
+          <div className="grid grid-cols-4 gap-2">
+            <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex flex-col items-center text-center gap-1">
+              <Users className="w-3.5 h-3.5 text-vert" />
+              <span className="text-xs font-bold text-gray-800">
+                {plan.userLimit}
+              </span>
+              <span className="text-[9px] text-gray-400 leading-tight">
+                Utilisateurs
+              </span>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex flex-col items-center text-center gap-1">
+              <HardDrive className="w-3.5 h-3.5 text-bleu" />
+              <span className="text-xs font-bold text-gray-800">
+                {plan.storageLimit} {UNIT_LABEL[plan.unitStorage]}
+              </span>
+              <span className="text-[9px] text-gray-400 leading-tight">
+                Stockage
+              </span>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex flex-col items-center text-center gap-1">
+              <PawPrint className="w-3.5 h-3.5 text-jaune" />
+              <span className="text-xs font-bold text-gray-800">
+                {plan.animalLimit}
+              </span>
+              <span className="text-[9px] text-gray-400 leading-tight">
+                Animaux
+              </span>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex flex-col items-center text-center gap-1">
+              <Warehouse className="w-3.5 h-3.5 text-orange-400" />
+              <span className="text-xs font-bold text-gray-800">
+                {plan.farmLimit}
+              </span>
+              <span className="text-[9px] text-gray-400 leading-tight">
+                Fermes
+              </span>
+            </div>
+          </div>
+
           <div>
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
               Renouvellement
@@ -427,7 +476,7 @@ console.log("📌 Organization ID :", organizationId);
                     )}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-4 gap-3">
                     <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center text-center gap-1">
                       <Users className="w-4 h-4 text-vert" />
                       <span className="text-sm font-bold text-gray-800">
@@ -440,7 +489,8 @@ console.log("📌 Organization ID :", organizationId);
                     <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center text-center gap-1">
                       <HardDrive className="w-4 h-4 text-bleu" />
                       <span className="text-sm font-bold text-gray-800">
-                        {currentPlan.storageLimit} Go
+                        {currentPlan.storageLimit}{" "}
+                        {UNIT_LABEL[currentPlan.unitStorage]}
                       </span>
                       <span className="text-[10px] text-gray-400">
                         Stockage
@@ -453,6 +503,15 @@ console.log("📌 Organization ID :", organizationId);
                       </span>
                       <span className="text-[10px] text-gray-400">
                         Animaux
+                      </span>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center text-center gap-1">
+                      <Warehouse className="w-4 h-4 text-orange-400" />
+                      <span className="text-sm font-bold text-gray-800">
+                        {currentPlan.farmLimit}
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        Fermes
                       </span>
                     </div>
                   </div>
@@ -560,11 +619,16 @@ console.log("📌 Organization ID :", organizationId);
                         </span>
                         <span className="flex items-center gap-1.5">
                           <HardDrive className="w-3.5 h-3.5" />{" "}
-                          {plan.storageLimit} Go de stockage
+                          {plan.storageLimit} {UNIT_LABEL[plan.unitStorage]}{" "}
+                          de stockage
                         </span>
                         <span className="flex items-center gap-1.5">
                           <PawPrint className="w-3.5 h-3.5" />{" "}
                           {plan.animalLimit} animaux
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <Warehouse className="w-3.5 h-3.5" />{" "}
+                          {plan.farmLimit} fermes
                         </span>
                       </div>
 

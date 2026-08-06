@@ -136,7 +136,7 @@ const computeAnalytics = (data: FetchProduction[]) => {
   // Par type
   const byType: Record<string, TypeStat> = {};
   data.forEach((p) => {
-    const key = p.Type || "Inconnu";
+    const key = p.type || "Inconnu";
     if (!byType[key])
       byType[key] = {
         type: key,

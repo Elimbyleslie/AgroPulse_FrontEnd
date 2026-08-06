@@ -224,7 +224,7 @@ const ProductionRow: React.FC<{ p: FetchProduction; onClick: () => void }> = ({ 
         <Package className="w-4 h-4 text-emerald-500" />
       </div>
       <div>
-        <p className="text-sm font-semibold text-gray-800">{p.Type}</p>
+        <p className="text-sm font-semibold text-gray-800">{p.type}</p>
         <p className="text-xs text-gray-400">
           {p.animal?.name || p.lot?.name || p.herd?.name || "—"}
           {p.user && ` · ${p.user.userName}`}
@@ -265,13 +265,13 @@ const DetailDrawer: React.FC<{
           <div className="relative">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full font-medium">
-                {production.Category === "Product" ? "Produit" : "Sous-produit"}
+                {production.category === "Product" ? "Produit" : "Sous-produit"}
               </span>
               <button onClick={onClose} className="p-1 rounded-lg bg-white/20 hover:bg-white/30 transition">
                 <ChevronRight className="w-4 h-4 rotate-180" />
               </button>
             </div>
-            <h2 className="text-2xl font-black">{production.Type}</h2>
+            <h2 className="text-2xl font-black">{production.type}</h2>
             <p className="text-4xl font-black mt-2">
               {production.quantity}
               <span className="text-lg text-emerald-100 ml-1">{production.unit}</span>
@@ -425,7 +425,7 @@ const DailyProduction: React.FC = () => {
   const chartData = useMemo(() => {
     if (!stats?.entities?.groupedStats) return [];
     return stats.entities.groupedStats.map((g, i) => ({
-      name: g.Type,
+      name: g.type,
       quantité: g._sum.quantity ?? 0,
       occurrences: g._count.id,
       unit: g.unit,

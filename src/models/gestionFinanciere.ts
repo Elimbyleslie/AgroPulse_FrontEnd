@@ -87,28 +87,17 @@ export interface Sale {
 // SaleItem
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface SaleItem {
-  id?: number;
+export type SaleItem = {
   saleId: number;
   productName: string;
-  category?: ProductCategory;
-  productType?: string;
-
-  unit?: string;
-
+  category: ProductCategory;
+  unit: string;
   quantity: number;
-
   unitPrice: number;
   totalPrice: number;
   discount?: number;
   productionId?: number;
-
   lotId?: number;
   animalId?: number;
-
-  description?: string;
   notes?: string;
-
-  createdAt?: string;
-  updatedAt?: string;
-}
+};

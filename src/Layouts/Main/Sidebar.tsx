@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { menuItems, MenuItem } from '../../config/menuConfig';
@@ -57,7 +57,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
-        <nav className="p-3 space-y-1  overflow-x-auto h-full  ">
+        <nav
+          className="
+            p-3 space-y-1 h-full
+            overflow-y-auto overflow-x-hidden
+            [scrollbar-width:thin]
+            [scrollbar-color:rgba(255,255,255,0.25)_transparent]
+            [&::-webkit-scrollbar]:w-1.5
+            [&::-webkit-scrollbar-track]:bg-transparent
+            [&::-webkit-scrollbar-thumb]:bg-white/25
+            [&::-webkit-scrollbar-thumb]:rounded-full
+            hover:[&::-webkit-scrollbar-thumb]:bg-white/40
+          "
+        >
           {menuItems.map(item => {
             const Icon = item.icon;
             const hasSubItems = !!item.subItems?.length;
@@ -69,7 +81,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 {hasSubItems ? (
                   <button
                     onClick={() => toggleMenu(item.path)}
-                    className={`w-full flex items-center justify-between mt-2   text-white px-4 py-3 rounded-lg transition-all ${
+                    className={`w-full flex items-center justify-between mt-2   text-white px-2 py-3 rounded-lg transition-all ${
                       isActive
                         ? 'bg-darkVert text-white font-medium'
                         : 'text-white hover:bg-darkVert '

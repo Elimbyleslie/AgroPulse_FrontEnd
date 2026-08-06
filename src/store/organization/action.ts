@@ -87,7 +87,7 @@ export const fetchWithAuthOrganizationById = createAsyncThunk<
   { state: RootState; rejectValue: ApiError }
 >("organizations/fetchWithAuthById", async (id, { rejectWithValue }) => {
   try {
-    return await fetchWithAuth(`${ROUTES.ORGANIZATION_GET_BY_ID}/${id}`);
+    return await fetchWithAuth(ROUTES.ORGANIZATION_GET_BY_ID(id));
   } catch (error: any) {
     return rejectWithValue(error as ApiError);
   }

@@ -25,31 +25,36 @@ import MainDashboard from "./pages/main/dash/Dashboard";
 import AnimalDetail from "./pages/main/animals/animalDetails";
 import AnimalTracking from "./pages/main/animals/suivieQRcode";
 import AnimalHistory from "./pages/main/animals/animalHistory";
+import GroupAnimal from "./pages/main/animals/GroupAnimal";
 import ConsultationDashboard from "./pages/main/health/ConsultationDashboard";
 import VaccinationDashboard from "./pages/main/health/VaccinationDashboard";
 import AlertDashboard from "./pages/main/alerts";
 import ReproductionDashboard from "./pages/main/reproduction/cycleGestation";
-import FeedStockDashboard from "./pages/main/Alimentation/FeedStockDashboard";
-import FeedingPlanDashboard from "./pages/main/Alimentation/FeedingPlanDashboard";
 import BirthDashboard from "./pages/main/reproduction/BirthDashBoard";
 import GeneticPerformanceList from "./pages/main/reproduction/performance";
-import SalesPage from "./pages/main/gestionFinanciere/SalePage";
-import ExpensesPage from "./pages/main/gestionFinanciere/ExpensesPages";
-import ProfitLossPage from "./pages/main/gestionFinanciere/ProfitLossPage";
+import FeedingPlanDashboard from "./pages/main/Alimentation/FeedingPlanDashboard";
+import FeedStockDashboard from "./pages/main/Alimentation/FeedStockDashboard";
 import ProductionTableau from "./pages/main/production/ProductionDashBoard";
 import DailyProduction from "./pages/main/production/DailyProduction";
 import PerfomancePage from "./pages/main/production/PerfomancePage";
 import LotAnalysis from "./pages/main/production/LotAnalysis";
 import ProductionCurves from "./pages/main/production/ProductionCurves";
-import GroupAnimal from "./pages/main/animals/GroupAnimal";
+import ExpensesPage from "./pages/main/gestionFinanciere/ExpensesPages";
+import VentesProduitsDashboard from "./pages/main/gestionFinanciere/VentesProduitsDashboard";
+import ProfitLossPage from "./pages/main/gestionFinanciere/ProfitLossPage";
 import ClientDashboard from "./pages/main/ClientDashboard";
 import InventoryGeneralDashboard from "./pages/main/stock&invintaire/InventoryGeneralDashboard";
-import PurchasesSuppliersDashboard from "./pages/main/stock&invintaire/PurchasesSupliersDashboard";
 import StockMovementsDashboard from "./pages/main/stock&invintaire/StockMovementsDashboard";
+import PurchasesSuppliersDashboard from "./pages/main/stock&invintaire/PurchasesSupliersDashboard";
 import EquipmentMaintenanceDashboard from "./pages/main/stock&invintaire/EquipmentMaintenanceDashboard";
 import MonAbonnementDashboard from './pages/main/Abonnement&Facturation/MonAbonnement'
 import HistoriquePaiements from './pages/main/Abonnement&Facturation/HistoryPayments'
 import GestionOffres from "./pages/main/Abonnement&Facturation/GestionOffres";
+import OrganizationDetailPage from "./pages/main/dash/organisation";
+import UsersManagementDashboard from "./pages/main/Administration/gestionUtilisateur";
+import RolesPermissionsDashboard from "./pages/main/Administration/Role&Permissions";
+import SettingsDashboard from "./pages/main/Administration/settings";
+
 function App() {
   const dispatch = useAppDispatch();
 
@@ -70,9 +75,6 @@ function App() {
 
     loadUser();
   }, [dispatch]);
-
-
-  
 
   return (
     <>
@@ -100,14 +102,27 @@ function App() {
           <Route element={<RequireAuth />}>
             <Route path="/main" element={<MainLayout />}>
               <Route index element={<Navigate to="dashboard" replace />} />
+
+              {/* ── Tableau de Bord ── */}
               <Route path="dashboard" element={<MainDashboard />} />
 
+              {/* ── Tâches & Planification ──
+                  TODO: aucun composant reçu (TaskDashboard / TaskAssign / TaskCalendar).
+                  Routes commentées tant qu'ils n'existent pas — décommenter au fur et
+                  à mesure, dans l'ordre du menu :
+              <Route path="tasks" element={<TaskDashboard />} />
+              <Route path="tasks/assign" element={<TaskAssign />} />
+              <Route path="tasks/calendar" element={<TaskCalendar />} />
+              */}
+
+              {/* ── Gestion du Cheptel ── */}
               <Route path="animals" element={<AnimalList />} />
               <Route path="animals/:id" element={<AnimalDetail />} />
               <Route path="animals/tracking" element={<AnimalTracking />} />
               <Route path="animals/groups" element={<GroupAnimal />} />
-              <Route path="animal/:id/history" element={<AnimalHistory />} />
+              <Route path="animals/:id/history" element={<AnimalHistory />} />
 
+              {/* ── Santé Animale ── */}
               <Route
                 path="health/consultations"
                 element={<ConsultationDashboard />}
@@ -115,6 +130,7 @@ function App() {
               <Route path="health/vaccins" element={<VaccinationDashboard />} />
               <Route path="health/alerts" element={<AlertDashboard />} />
 
+              {/* ── Reproduction ── */}
               <Route
                 path="reproduction/cycles"
                 element={<ReproductionDashboard />}
@@ -125,20 +141,11 @@ function App() {
                 element={<GeneticPerformanceList />}
               />
 
-              <Route
-                path="feeding/feedstock"
-                element={<FeedStockDashboard />}
-              />
-              <Route
-                path="feeding/rations"
-                element={<FeedingPlanDashboard />}
-              />
+              {/* ── Alimentation ── */}
+              <Route path="feeding/rations" element={<FeedingPlanDashboard />} />
+              <Route path="feeding/feedstock" element={<FeedStockDashboard />} />
 
-              <Route path="finance/sales" element={<SalesPage />} />
-              <Route path="finance/expenses" element={<ExpensesPage />} />
-              <Route path="finance/reports" element={<ProfitLossPage />} />
-              <Route path="finance/clients" element={<ClientDashboard />} />
-
+              {/* ── Production ── */}
               <Route
                 path="production/dashboard"
                 element={<ProductionTableau />}
@@ -151,35 +158,43 @@ function App() {
               <Route path="production/lots" element={<LotAnalysis />} />
               <Route path="production/curves" element={<ProductionCurves />} />
 
+              {/* ── Finance & Ventes ── */}
+              <Route path="finance/expenses" element={<ExpensesPage />} />
+              <Route path="finance/sales" element={<VentesProduitsDashboard />} />
+              <Route path="finance/reports" element={<ProfitLossPage />} />
+              <Route path="finance/clients" element={<ClientDashboard />} />
+
+              {/* ── Stocks & Matériel ── */}
+              <Route path="inventory" element={<InventoryGeneralDashboard />} />
               <Route
-                path="/main/inventory"
-                element={<InventoryGeneralDashboard />}
-              />
-              <Route
-                path="/main/inventory/purchases"
-                element={<PurchasesSuppliersDashboard />}
-              />
-              <Route
-                path="/main/inventory/movements"
+                path="inventory/movements"
                 element={<StockMovementsDashboard />}
               />
               <Route
-                path="/main/inventory/equipment"
+                path="inventory/purchases"
+                element={<PurchasesSuppliersDashboard />}
+              />
+              <Route
+                path="inventory/equipment"
                 element={<EquipmentMaintenanceDashboard />}
               />
 
+              {/* ── Abonnement ── */}
+              <Route path="subscription" element={<MonAbonnementDashboard />} />
               <Route
-              path="/main/subscription"
-              element={<MonAbonnementDashboard />}
+                path="subscription/payments"
+                element={<HistoriquePaiements />}
               />
-              <Route
-              path="/main/subscription/payments"
-              element={<HistoriquePaiements />}
-              />
-              <Route
-              path="/main/subscription/plans"
-              element={<GestionOffres />}
-              />
+              <Route path="subscription/plans" element={<GestionOffres />} />
+
+              {/* ── Mon Organisation ── */}
+              <Route path="organization" element={<OrganizationDetailPage />} />
+           
+
+              {/* ── Administration ── */}
+              <Route path="admin/users" element={<UsersManagementDashboard />} />
+              <Route path="admin/roles" element={<RolesPermissionsDashboard />} />
+              <Route path="admin/settings" element={<SettingsDashboard />} />
 
               <Route path="*" element={<NotFoundMain />} />
             </Route>

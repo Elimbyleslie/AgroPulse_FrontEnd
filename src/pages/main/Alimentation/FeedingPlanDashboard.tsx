@@ -23,16 +23,16 @@ import {
   createFeedingPlan,
   updateFeedingPlan,
   deleteFeedingPlan,
-  fecthInventory,
   distributeFeedingPlan,
 } from "../../../store/alimentations/action";
-import { selectFeedingPlans,selectFeedingPlanState } from "../../../store/alimentations/slice";
-import { selectInventory } from "../../../store/alimentations/slice";
+import { fetchFeedStock } from "../../../store/alimentations/feedstockAct";
+import { selectFeedingPlans, selectFeedingPlanState } from "../../../store/alimentations/slice";
+import { selectFeedStock } from "../../../store/alimentations/sliceStock";
 import { selectCurrentFarm, setCurrentFarm } from "../../../store/farm/slice";
 import { getUserFarms } from "../../../store/farm/action";
 import { getAllAnimals } from "../../../store/animal/action";
-import type { FeedingPlan, Inventory } from "../../../models/alimentation";
-import { InventoryCategory } from "../../../models/alimentation";
+import type { FeedingPlan } from "../../../models/alimentation";
+import { FeedStock } from "../../../models/alimentation";
 import { getAllLots } from "../../../store/lot/action";
 import { getAllHerds } from "../../../store/herd/action";
 import { getAllPens } from "../../../store/pen/action";
@@ -126,10 +126,6 @@ const isAlreadyDistributed = (plan: FeedingPlan): boolean => {
       return false;
   }
 };
-
-// Filtre uniquement les articles de catégorie FEED pour les plans de ration
-const isFeedItem = (item: Inventory) =>
-  item.category === InventoryCategory.FEED;
 
 // ── Delete Modal ──────────────────────────────────────────────────────────────
 const DeleteModal: React.FC<{
@@ -254,7 +250,7 @@ const DetailModal: React.FC<{
               <div className="flex items-center gap-1.5">
                 <Package className="w-3.5 h-3.5 text-gray-400" />
                 <p className="text-sm font-semibold text-gray-700">
-                  {inventoryName ?? `#${plan.inventoryId}`}
+                  {inventoryName ?? `#${plan.feedStockId}`}
                 </p>
               </div>
             </div>
@@ -338,7 +334,7 @@ const FormModal: React.FC<{
   lots: any[];
   herds: any[];
   pens: any[];
-  inventory: Inventory[]; // ← anciennement stocks: FeedStock[]
+  feedStock: FeedStock[];
   initial?: FeedingPlan | null;
   onClose: () => void;
   onSuccess: () => void;
@@ -349,7 +345,7 @@ const FormModal: React.FC<{
   lots,
   herds,
   pens,
-  inventory,
+  feedStock,
   initial,
   onClose,
   onSuccess,
@@ -373,7 +369,7 @@ const FormModal: React.FC<{
       initial?.herdId ??
       initial?.penId ??
       "") as any,
-    inventoryId: (initial?.inventoryId ?? "") as any, // ← remplace feedStockId
+    feedStockId: (initial?.feedStockId ?? "") as any,
     quantity: (initial?.quantity ?? "") as any,
     unit: initial?.unit ?? "kg",
     frequency: (initial?.frequency ?? "daily") as Frequency,
@@ -407,10 +403,9 @@ const FormModal: React.FC<{
     })),
   };
 
-  // Inventaire : on filtre sur FEED, mais on garde tout en fallback si aucun FEED
-  const feedItems = inventory.filter(isFeedItem);
-  const displayItems = feedItems.length > 0 ? feedItems : inventory;
-  const inventoryOptions = displayItems.map((s) => ({
+  // Options d'aliments — feedStock (store des aliments) contient déjà
+  // uniquement des articles de type "aliment", pas besoin de filtrage.
+  const inventoryOptions = feedStock.map((s) => ({
     value: s.id,
     label: `${s.name} — ${s.quantity} ${s.unit}${s.status ? ` (${s.status})` : ""}`,
   }));
@@ -430,7 +425,7 @@ const FormModal: React.FC<{
   const handleSubmit = async () => {
     if (
       !form.targetId ||
-      !form.inventoryId ||
+      !form.feedStockId ||
       form.quantity === "" ||
       !form.startDate
     )
@@ -440,7 +435,7 @@ const FormModal: React.FC<{
       const payload: any = {
         farmId,
         userId,
-        inventoryId: Number(form.inventoryId), // ← remplace feedStockId
+        feedStockId: Number(form.feedStockId),
         quantity: Number(form.quantity),
         unit: form.unit,
         frequency: form.frequency,
@@ -550,26 +545,21 @@ const FormModal: React.FC<{
 
           <hr className="border-gray-50" />
 
-          {/* Aliment (Inventaire) */}
+          {/* Aliment (stock) */}
           <div>
             <label className="text-xs font-black text-gray-400 uppercase mb-1 block">
-              Aliment (stock inventaire) *
-              {feedItems.length === 0 && inventory.length > 0 && (
-                <span className="ml-2 text-[10px] text-amber-500 normal-case font-semibold">
-                  — Aucun article FEED trouvé, tous les articles sont affichés
-                </span>
-              )}
+              Aliment (stock) *
             </label>
             <SelectInput
-              value={form.inventoryId}
-              onChange={(v) => set("inventoryId", v)}
+              value={form.feedStockId}
+              onChange={(v) => set("feedStockId", v)}
               options={inventoryOptions}
               placeholder="— choisir un aliment —"
             />
-            {inventory.length === 0 && (
+            {feedStock.length === 0 && (
               <p className="text-[10px] text-orange-500 font-semibold mt-1">
-                Aucun article dans l'inventaire. Créez d'abord un article de
-                catégorie "Aliment".
+                Aucun aliment en stock. Créez d'abord un article dans le stock
+                d'aliments.
               </p>
             )}
           </div>
@@ -684,7 +674,7 @@ const FormModal: React.FC<{
             disabled={
               saving ||
               !form.targetId ||
-              !form.inventoryId ||
+              !form.feedStockId ||
               form.quantity === "" ||
               !form.startDate
             }
@@ -715,7 +705,7 @@ const FeedingPlanDashboard: React.FC = () => {
     (state) => state.authentification.auth.user,
   );
   const farmId = currentFarm?.id;
-  const inventory = useAppSelector(selectInventory);
+  const feedStock = useAppSelector(selectFeedStock);
 
   const lotsRaw = useAppSelector((s) => s.lot.entities ?? s.lot ?? []);
   const herdsRaw = useAppSelector((s) => s.herd.entities ?? s.herd ?? []);
@@ -725,8 +715,8 @@ const FeedingPlanDashboard: React.FC = () => {
   const herds: Herd[] = Array.isArray(herdsRaw) ? herdsRaw : [];
   const pens: Pen[] = Array.isArray(pensRaw) ? pensRaw : [];
 
-const feedingPlans = useAppSelector(selectFeedingPlans); // ← Utilise le selector exporté du slice
-const { loading } = useAppSelector(selectFeedingPlanState);
+  const feedingPlans = useAppSelector(selectFeedingPlans);
+  const { loading } = useAppSelector(selectFeedingPlanState);
   const animalsRaw = useAppSelector(
     (state) => state.animal?.animalist?.entities,
   );
@@ -736,15 +726,11 @@ const { loading } = useAppSelector(selectFeedingPlanState);
       ? [animalsRaw]
       : [];
 
-  console.log("🔍 FeedingPlans from Redux:", feedingPlans);
-  console.log("📊 Type:", typeof feedingPlans, Array.isArray(feedingPlans));
-  console.log("📊 Current farmId:", farmId);
-
-  // inventory filtré : articles de type FEED
-  const feedInventory: Inventory[] = Array.isArray(inventory)
-    ? inventory
-    : inventory
-      ? [inventory]
+  // Stock d'aliments (FeedStock) filtré pour la ferme courante
+  const feedstocked: FeedStock[] = Array.isArray(feedStock)
+    ? feedStock
+    : feedStock
+      ? [feedStock]
       : [];
 
   const [isLoadingFarm, setIsLoadingFarm] = useState(false);
@@ -769,7 +755,7 @@ const { loading } = useAppSelector(selectFeedingPlanState);
             const first = farms[0];
             dispatch(setCurrentFarm(first));
             dispatch(fetchFeedingPlan(first.id));
-            dispatch(fecthInventory(first.id));
+            dispatch(fetchFeedStock(first.id));
             dispatch(getAllAnimals({ farmId: first.id, limit: 200, page: 1 }));
           }
         } catch (e) {
@@ -784,11 +770,16 @@ const { loading } = useAppSelector(selectFeedingPlanState);
 
   useEffect(() => {
     if (!farmId) return;
-    dispatch(fecthInventory(farmId));
+    dispatch(fetchFeedStock(farmId));
     dispatch(getAllAnimals({ farmId, limit: 200, page: 1 }));
     dispatch(getAllLots({ farmId, limit: 100 }));
     dispatch(getAllHerds({ farmId }));
     dispatch(getAllPens({ farmId }));
+  }, [dispatch, farmId]);
+
+  useEffect(() => {
+    if (!farmId) return;
+    dispatch(fetchFeedingPlan(farmId));
   }, [dispatch, farmId]);
 
   const refresh = useCallback(() => {
@@ -813,28 +804,21 @@ const { loading } = useAppSelector(selectFeedingPlanState);
     }
   };
 
-  // Après le useEffect de chargement
-useEffect(() => {
-  if (farmId) {
-    console.log("🚀 Dispatching fetchFeedingPlan for farmId:", farmId);
-    const promise = dispatch(fetchFeedingPlan(farmId));
-    
-    promise.then((result) => {
-      console.log("✅ fetchFeedingPlan RESULT:", result);
-      console.log("✅ Payload brut:", result?.payload);
-    }).catch((err) => {
-      console.error("❌ fetchFeedingPlan ERROR:", err);
-    });
-  }
-}, [dispatch, farmId]);
-
   const handleDistribute = async (planId: number) => {
     setIsDistributing(true);
     try {
       await dispatch(distributeFeedingPlan(planId)).unwrap();
       toast.success("Distribution effectuée !");
     } catch (error: any) {
-      toast.error(error?.message ?? "Stock insuffisant !");
+      // On loggue l'erreur brute pour voir la vraie cause renvoyée par
+      // l'API (au lieu d'un message générique qui masque le problème).
+      console.error("distributeFeedingPlan error:", error);
+      const realMessage =
+        error?.message ??
+        error?.data?.message ??
+        error?.response?.data?.message ??
+        (typeof error === "string" ? error : null);
+      toast.error(realMessage ?? "La distribution a échoué (voir la console)");
     } finally {
       setIsDistributing(false);
     }
@@ -843,8 +827,8 @@ useEffect(() => {
   // Helpers résolution noms
   const getAnimalName = (id?: number | null) =>
     id ? animals.find((a) => a.id === id)?.name : undefined;
-  const getInventoryName = (id?: number | null) =>
-    id ? feedInventory.find((s) => s.id === id)?.name : undefined;
+  const getFeedStockName = (feedStock?: FeedStock) =>
+    feedStock ? feedStock.name : undefined;
   const getLotName = (id?: number | null) =>
     id ? lots.find((l) => l.id === id)?.name : undefined;
   const getHerdName = (id?: number | null) =>
@@ -874,7 +858,7 @@ useEffect(() => {
       const s = searchTerm.toLowerCase();
       return (
         getTargetName(p)?.toLowerCase().includes(s) ||
-        getInventoryName(p.inventoryId)?.toLowerCase().includes(s)
+        getFeedStockName(p.feedStock)?.toLowerCase().includes(s)
       );
     });
 
@@ -1115,8 +1099,8 @@ useEffect(() => {
                         <div className="flex items-center gap-1.5">
                           <Package className="w-3.5 h-3.5 text-gray-300" />
                           <span className="text-sm text-gray-600">
-                            {getInventoryName(p.inventoryId) ??
-                              `#${p.inventoryId}`}
+                            {getFeedStockName(p.feedStock) ??
+                              `#${p.feedStock?.name}`}
                           </span>
                         </div>
                       </td>
@@ -1137,7 +1121,7 @@ useEffect(() => {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-xs text-gray-500">
-                        {fmtDate(plan_start(p))}
+                        {fmtDate(p.startDate)}
                         {p.endDate && ` → ${fmtDate(p.endDate)}`}
                       </td>
                       <td className="px-4 py-3">
@@ -1224,8 +1208,8 @@ useEffect(() => {
                         {getTargetName(p) ?? `Plan #${p.id}`}
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {getInventoryName(p.inventoryId) ??
-                          `Article #${p.inventoryId}`}{" "}
+                        {getFeedStockName(p.feedStock) ??
+                          `Article #${p.feedStock?.name}`}{" "}
                         ·{" "}
                         <span className="font-semibold text-yellow-600">
                           {p.quantity} {p.unit}
@@ -1284,7 +1268,7 @@ useEffect(() => {
           lots={lots}
           herds={herds}
           pens={pens}
-          inventory={feedInventory}
+          feedStock={feedstocked}
           initial={editingItem}
           onClose={() => {
             setShowForm(false);
@@ -1301,7 +1285,7 @@ useEffect(() => {
         <DetailModal
           plan={detailItem}
           targetName={getTargetName(detailItem)}
-          inventoryName={getInventoryName(detailItem.inventoryId)}
+          inventoryName={getFeedStockName(detailItem.feedStock)}
           onClose={() => setDetailItem(null)}
           onEdit={() => {
             setEditingItem(detailItem);
@@ -1320,8 +1304,5 @@ useEffect(() => {
     </div>
   );
 };
-
-// Helper pour éviter l'erreur TypeScript sur plan.startDate dans le template JSX
-const plan_start = (p: FeedingPlan) => p.startDate;
 
 export default FeedingPlanDashboard;

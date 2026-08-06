@@ -36,6 +36,7 @@ import {
 import {
   Equipement,
   EquipmentMaintenance,
+  EquipmentStatus,
 } from "../../../models/equipement&maintenance";
 import SelectInput from "../../../components/UI/SelectInput";
 import { selectCurrentFarm } from "../../../store/farm/slice";
@@ -75,17 +76,17 @@ const statusConfig: Record<
   string,
   { label: string; cls: string; icon: React.ReactNode }
 > = {
-  OPERATIONAL: {
+  operational: {
     label: "Opérationnel",
-    cls: "bg-emerald-50 text-jaune border border-emerald-200",
+    cls: "bg-emerald-50 text-emerald-700 border border-emerald-200",
     icon: <CheckCircle2 className="w-3.5 h-3.5" />,
   },
-  UNDER_MAINTENANCE: {
+  underMaintenance: {
     label: "En maintenance",
     cls: "bg-amber-50 text-amber-600 border border-amber-200",
     icon: <Wrench className="w-3.5 h-3.5" />,
   },
-  OUT_OF_SERVICE: {
+  outOfService: {
     label: "Hors service",
     cls: "bg-red-50 text-rouge border border-red-200",
     icon: <Ban className="w-3.5 h-3.5" />,
@@ -177,16 +178,17 @@ const EquipmentFormModal: React.FC<{
 }> = ({ farmId, initial, onClose, onSuccess }) => {
   const dispatch = useAppDispatch();
   const [saving, setSaving] = useState(false);
+  
   const [form, setForm] = useState({
-    name: initial?.name || "",
-    description: initial?.description || "",
-    purchaseDate: initial?.purchaseDate
-      ? new Date(initial.purchaseDate).toISOString().slice(0, 10)
-      : "",
-    status: initial?.status || "OPERATIONAL",
-    value: initial?.value ?? ("" as any),
-    maintenanceFrequency: initial?.maintenanceFrequency || "",
-  });
+  name: initial?.name || "",
+  description: initial?.description || "",
+  purchaseDate: initial?.purchaseDate
+    ? new Date(initial.purchaseDate).toISOString().slice(0, 10)
+    : "",
+  status: initial?.status || EquipmentStatus.operational, 
+  value: initial?.value ?? ("" as any),
+  maintenanceFrequency: initial?.maintenanceFrequency || "",
+});
   const set = (k: string, v: any) => setForm((p) => ({ ...p, [k]: v }));
   const inputClass =
     "w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent text-sm transition";
@@ -651,10 +653,10 @@ const EquipmentMaintenanceDashboard: React.FC = () => {
 
   const totalMaintCost = maintenances.reduce((s, m) => s + (m.cost || 0), 0);
   const underMaintenanceCount = equipments.filter(
-    (e) => e.status === "UNDER_MAINTENANCE",
+    (e) => e.status === EquipmentStatus.underMaintenance,
   ).length;
   const outOfServiceCount = equipments.filter(
-    (e) => e.status === "OUT_OF_SERVICE",
+    (e) => e.status === EquipmentStatus.outOfService,
   ).length;
 
   const paginatedMaint = filteredMaint.slice(

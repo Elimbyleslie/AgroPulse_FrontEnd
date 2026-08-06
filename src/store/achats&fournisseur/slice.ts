@@ -166,7 +166,7 @@ export const {
 } = supplierSlice.actions;
 
 // ── Selectors ─────────────────────────────────────────────────────────────────
-export const selectSuppliers = (state: RootState) => state.supplier.suppliers;
+export const selectSuppliers = (state: RootState) => state.supplier.suppliers?.filter(Boolean) || [];
 export const selectCurrentSupplier = (state: RootState) => state.supplier.currentSupplier;
 export const selectSupplierPagination = (state: RootState) => state.supplier.pagination;
 

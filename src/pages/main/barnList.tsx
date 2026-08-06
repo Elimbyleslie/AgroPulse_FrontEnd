@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '../../hooks/store';
 import { getAllBarns, deleteBarn } from '../../store/barn/action';
+import PenForm from "../../components/Modal/Pen/PenForm"
 import { 
   Home, 
   Trash2, 
@@ -29,6 +30,8 @@ const BarnList: React.FC<BarnDashboardProps> = ({ farmId }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedBarn, setSelectedBarn] = useState<Barn | null>(null);
+  const [expandedBarn, setExpandedBarn] = useState<Barn | null>(null);
+
 
   // Fonction de chargement des données
   const fetchBarns = useCallback((search: string) => {
@@ -175,6 +178,16 @@ const BarnList: React.FC<BarnDashboardProps> = ({ farmId }) => {
                     >
                       <Trash2 size={18} />
                     </Button>
+
+                    <Button onClick={() => setExpandedBarn(barn)} className="...">
+  Ouvrir
+</Button>
+{expandedBarn && (
+  <div className="fixed inset-0 z-[100] ...">
+    <h3>Ajouter dans {expandedBarn.name}</h3>
+    <PenForm farmId={farmId} barnId={expandedBarn.id} onSuccess={() => setExpandedBarn(null)} />
+  </div>
+)}
                   </div>
                 </div>
               </motion.div>

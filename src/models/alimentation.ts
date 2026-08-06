@@ -81,7 +81,7 @@ export type AnimalFeeding = {
 
 export type FeedingPlan = {
   id: number
-  inventoryId: number        
+  feedStockId: number        
   quantity: number
   unit: string
   animalId: number
@@ -97,6 +97,7 @@ export type FeedingPlan = {
   createdAt: Date
   updatedAt: Date
   lastDistributedAt: Date | null
+  feedStock?: FeedStock
 
 }
 
