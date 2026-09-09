@@ -1,17 +1,17 @@
 export interface Invitation {
-  id: number;
-  token: string;
-  organizationId: number;
-  farmId?: number | null;
-  roleId?: number | null;
-  createdBy: number;
-  expiresAt?: string | null;
-  maxUses?: number | null;
-  usedCount: number;
-  createdAt: string;
-  farm?: { id: number; name: string } | null;
-}
-
+     id: number;
+     token: string;
+     organizationId: number;
+     farmId: number;
+     roleId: number;
+     createdBy: number;
+     expiresAt?: string | null;
+     maxUses: number | null;
+     usedCount: number;
+     createdAt: string;
+     farm?: { id: number; name: string };
+     creator?: { id: number; name: string };
+   }
 export interface InvitationValidation {
   organizationName: string;
   farmName: string | null;

@@ -49,7 +49,6 @@ const barnSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // Matchers pour pending/rejected (pour éviter la répétition)
 
     // Fulfilled cases
     builder.addCase(getAllBarns.fulfilled, (state, action) => {

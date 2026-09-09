@@ -86,16 +86,16 @@ const userSlice = createSlice({
         state.usersState.error = null;
       })
       .addCase(fetchUsers.fulfilled, (state, action) => {
-          console.log("PAYLOAD REÇU:", action.payload); // 👈
+        console.log("PAYLOAD REÇU:", action.payload); // 👈
 
-  state.usersState.loading = false;
-  const payload = action.payload as unknown as {
-    data: User[];
-    pagination?: Pagination | null;
-  };
-  state.users = payload.data ?? [];
-  state.usersPagination = payload.pagination ?? null;
-})
+        state.usersState.loading = false;
+        const payload = action.payload as unknown as {
+          data: User[];
+          pagination?: Pagination | null;
+        };
+        state.users = payload.data ?? [];
+        state.usersPagination = payload.pagination ?? null;
+      })
       .addCase(fetchUsers.rejected, (state, action) => {
         state.usersState.loading = false;
         state.usersState.error = action.payload ?? null;
@@ -216,8 +216,8 @@ const userSlice = createSlice({
       })
       .addCase(getUserRoles.fulfilled, (state, action) => {
         state.rolesState.loading = false;
-        const payload = action.payload.data as any;
-        state.userRoles = Array.isArray(payload) ? payload : (payload ?? []);
+        const payload = action.payload as any;
+        state.userRoles = Array.isArray(payload) ? payload : [];
       })
       .addCase(getUserRoles.rejected, (state, action) => {
         state.rolesState.loading = false;
@@ -231,7 +231,8 @@ const userSlice = createSlice({
       .addCase(assignRoleToUser.fulfilled, (state, action) => {
         state.rolesState.loading = false;
         state.rolesState.success = true;
-        state.userRoles.push(action.payload.data);
+        const newRole = action.payload?.data ?? action.payload?.data;
+        if (newRole) state.userRoles.push(newRole);
       })
       .addCase(assignRoleToUser.rejected, (state, action) => {
         state.rolesState.loading = false;

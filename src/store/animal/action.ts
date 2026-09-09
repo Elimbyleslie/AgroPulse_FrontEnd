@@ -12,7 +12,6 @@ export const getAllAnimals = createAsyncThunk(
   "animal/list",
   async (args: { limit?: number; page?: number; farmId: number }, apiThunk) => {
     try {
-      // 1. On construit l'URL proprement avec URLSearchParams
       const params = new URLSearchParams();
       params.append("limit", args.limit?.toString() || "10");
       params.append("page", (args.page || 1).toString());
@@ -20,11 +19,9 @@ export const getAllAnimals = createAsyncThunk(
       if (args.farmId) {
         params.append("farmId", args.farmId.toString());
       } else {
-        // Si on arrive ici sans farmId, on stoppe tout de suite
         return apiThunk.rejectWithValue("farmId obligatoire");
       }
 
-      // 2. Appel API avec l'URL construite
       const result = await fetchWithAuth(
         `${ROUTES.ANIMAL_LIST}?${params.toString()}`,
       );

@@ -75,7 +75,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             const hasSubItems = !!item.subItems?.length;
             const isExpanded = expandedMenus.includes(item.path);
             const isActive = isMenuActive(item);
-
+                                                
             return (
               <div key={item.path}>
                 {hasSubItems ? (

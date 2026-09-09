@@ -1,6 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from "react";
-
 const StatCard = ({ title, value, icon, trend }: any) => (
   <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
     <div>

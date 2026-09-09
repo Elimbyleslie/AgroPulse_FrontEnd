@@ -24,7 +24,6 @@ export interface Inventory {
 
 
 export enum InventoryCategory {
-    FEED = "FEED", 
   MEDICINE = "MEDICINE",
   SUPPLEMENT = "SUPPLEMENT",
   FERTILIZER= "FERTILIZER",

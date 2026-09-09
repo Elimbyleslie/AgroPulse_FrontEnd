@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createSlice } from "@reduxjs/toolkit";
 import { ApiError } from "../../models/store";
@@ -26,6 +25,7 @@ interface DomainState<T> {
   mutateLoading: boolean;
   error: ApiError | null;
   success: boolean;
+  data: T | null;
 }
 
 interface FeedStockState {
@@ -40,6 +40,7 @@ const domainInit = <T>(): DomainState<T> => ({
   mutateLoading: false,
   error: null,
   success: false,
+  data: null,
 });
 
 const initialState: FeedStockState = {

@@ -9,7 +9,7 @@ import lotSlice from "./lot/slice";
 import herdSlice from "./herd/slice";
 import barnSlice from "./barn/slice";
 import penSlice from "./pen/slice";
-import historySlice from "./AnimalHistory/slice";
+import animalHealthRecordSlice from "./AnimalHistory/slice";
 import healthSlice from "./health/slice";
 import alertsSlice from "./alerts/slice"
 import reproductionSlice from "./Reproduction/slice";
@@ -31,7 +31,12 @@ import adminSlice from "./administration/slice";
 import userSlice from "./auth/userSlice";
 import settingsSlice from "./administration/sliceSetting";
 import invitationSlice from "./administration/inviteSlice";
-
+import FarmTaskSlice from "./farm/farmTaskSlice";
+import FarmUserSlice from "./farm/farmUserSlice";
+import auditSlice from "./administration/auditslice";
+import activityLogSlice from "./administration/logSlice";
+import pedigreeSlice from "./Reproduction/slicepedigree";
+import subscriptionPaymentSlice from  "./Abonnement&Facturation/subscriptionPaymentSlice";
 const rootReducer = combineReducers({   
   [AuthSlice.name]: AuthSlice.reducer,
   [OrganizationSlice.name]: OrganizationSlice.reducer,
@@ -43,7 +48,7 @@ const rootReducer = combineReducers({
   [herdSlice.name]: herdSlice.reducer,
   [barnSlice.name]: barnSlice.reducer,
   [penSlice.name]: penSlice.reducer,
-  [historySlice.name]: historySlice.reducer,
+  [animalHealthRecordSlice.name]: animalHealthRecordSlice.reducer,
   [healthSlice.name]: healthSlice.reducer,
   [alertsSlice.name]: alertsSlice.reducer,
   [reproductionSlice.name]:reproductionSlice.reducer,
@@ -65,6 +70,13 @@ const rootReducer = combineReducers({
   [userSlice.name]: userSlice.reducer,
   [settingsSlice.name]: settingsSlice.reducer,
   [invitationSlice.name]:invitationSlice.reducer,
+  [FarmTaskSlice.name]:FarmTaskSlice.reducer,
+  [FarmUserSlice.name]:FarmUserSlice.reducer,
+  [auditSlice.name]:auditSlice.reducer,
+  [activityLogSlice.name]:activityLogSlice.reducer,
+  [pedigreeSlice.name]:pedigreeSlice.reducer,
+  [subscriptionPaymentSlice.name]:subscriptionPaymentSlice.reducer,
+
 });
 
 export const store = configureStore({

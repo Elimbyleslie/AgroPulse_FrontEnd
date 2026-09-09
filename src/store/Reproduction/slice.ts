@@ -2,7 +2,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type {
   FetchReproductionCycle, FetchGestation, FetchGestationCheckup,
-  FetchGeneticPerformance, FetchPedigree,
+  FetchGeneticPerformance,
 } from "../../models/reproduction";
 
 import {
@@ -14,7 +14,6 @@ import {
   createGestationCheckup, updateGestationCheckup, deleteGestationCheckup,
   fetchGeneticPerformances, fetchGeneticPerformanceById,
   createGeneticPerformance, updateGeneticPerformance, deleteGeneticPerformance,
-  fetchPedigrees, fetchPedigreeById, createPedigree, updatePedigree, deletePedigree,
   syncGeneticPerformance,fetchGeneticStats
 } from "./action";
 
@@ -28,8 +27,6 @@ interface ReproductionState {
   currentCheckup: FetchGestationCheckup | null;
   geneticPerformances: FetchGeneticPerformance[];
   currentGeneticPerformance: FetchGeneticPerformance | null;
-  pedigrees: FetchPedigree[];
-  currentPedigree: FetchPedigree | null;
   loading: boolean;
   error: string | null;
   success: boolean;
@@ -42,19 +39,13 @@ const initialState: ReproductionState = {
   gestations: [], currentGestation: null,
   checkups: [], currentCheckup: null,
   geneticPerformances: [], currentGeneticPerformance: null,
-  pedigrees: [], currentPedigree: null,
   loading: false, error: null, success: false,
   stats:null,
   syncLoading:false,
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-// API shape : { meta, data: { data: [...], pagination: {} }, error }
-// Pour les listes paginées : payload.data.data
-// Pour les entités uniques : payload.data
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 const extractList  = (p: any) => p?.data?.data ?? p?.data ?? [];
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const extractOne   = (p: any) => p?.data ?? p ?? null;
 
 const setPending  = (state: ReproductionState) => { state.loading = true;  state.error = null; state.success = false; };
@@ -73,10 +64,8 @@ const reproductionSlice = createSlice({
     clearCurrentGestation:         (state) => { state.currentGestation = null; },
     clearCurrentCheckup:           (state) => { state.currentCheckup = null; },
     clearCurrentGeneticPerformance:(state) => { state.currentGeneticPerformance = null; },
-    clearCurrentPedigree:          (state) => { state.currentPedigree = null; },
     resetReproductionState: () => initialState,
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   extraReducers: (builder) => {
 
     // ── CYCLES ────────────────────────────────────────────────────────────────
@@ -259,51 +248,7 @@ const reproductionSlice = createSlice({
       })
       .addCase(deleteGeneticPerformance.rejected, setRejected);
 
-    // ── PEDIGREES ─────────────────────────────────────────────────────────────
-    builder
-      .addCase(fetchPedigrees.pending, setPending)
-      .addCase(fetchPedigrees.fulfilled, (state, action: PayloadAction<any>) => {
-        state.loading = false; state.pedigrees = extractList(action.payload); state.error = null;
-      })
-      .addCase(fetchPedigrees.rejected, setRejected);
-
-    builder
-      .addCase(fetchPedigreeById.pending, setPending)
-      .addCase(fetchPedigreeById.fulfilled, (state, action: PayloadAction<any>) => {
-        state.loading = false; state.currentPedigree = extractOne(action.payload); state.error = null;
-      })
-      .addCase(fetchPedigreeById.rejected, setRejected);
-
-    builder
-      .addCase(createPedigree.pending, setPending)
-      .addCase(createPedigree.fulfilled, (state, action: PayloadAction<any>) => {
-        state.loading = false; state.success = true; state.error = null;
-        const item = extractOne(action.payload);
-        if (item?.id) state.pedigrees.unshift(item);
-      })
-      .addCase(createPedigree.rejected, setRejected);
-
-    builder
-      .addCase(updatePedigree.pending, setPending)
-      .addCase(updatePedigree.fulfilled, (state, action: PayloadAction<any>) => {
-        state.loading = false; state.success = true; state.error = null;
-        const item = extractOne(action.payload);
-        if (item?.id) {
-          const idx = state.pedigrees.findIndex((p) => p.id === item.id);
-          if (idx !== -1) state.pedigrees[idx] = item;
-          if (state.currentPedigree?.id === item.id) state.currentPedigree = item;
-        }
-      })
-      .addCase(updatePedigree.rejected, setRejected);
-
-    builder
-      .addCase(deletePedigree.pending, setPending)
-      .addCase(deletePedigree.fulfilled, (state, action) => {
-        state.loading = false; state.success = true; state.error = null;
-        state.pedigrees = state.pedigrees.filter((p) => p.id !== (action.meta.arg as number));
-      })
-      .addCase(deletePedigree.rejected, setRejected);
-
+  
 
 builder
   // Sync
@@ -313,7 +258,6 @@ builder
   .addCase(syncGeneticPerformance.fulfilled, (state, action) => {
     state.syncLoading = false;
     state.success = true;
-    // Optionnel : mettre à jour l'animal dans la liste locale
     const index = state.geneticPerformances.findIndex(gp => gp.animalId === action.payload.animalId);
     if (index !== -1) state.geneticPerformances[index] = action.payload;
     else state.geneticPerformances.push(action.payload);
@@ -329,7 +273,7 @@ builder
 
 export const {
   clearError, clearSuccess, clearCurrentCycle, clearCurrentGestation,
-  clearCurrentCheckup, clearCurrentGeneticPerformance, clearCurrentPedigree,
+  clearCurrentCheckup, clearCurrentGeneticPerformance,
   resetReproductionState,
 } = reproductionSlice.actions;
 

@@ -250,7 +250,7 @@ const StockMovementsDashboard: React.FC = () => {
   useEffect(() => {
     if (farmId) {
       dispatch(fetchStockMovements({ farmId, limit: 500 }));
-      dispatch(fecthInventory(farmId));
+      dispatch(fecthInventory({farmId}));
     }
   }, [dispatch, farmId]);
 

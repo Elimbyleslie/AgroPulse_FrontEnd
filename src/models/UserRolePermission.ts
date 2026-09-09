@@ -5,10 +5,13 @@ export interface Role {
   description?: string | null;
   createdAt?: string | Date;
   updatedAt?: string | Date;
-  permissions?: Permission[];
+  permissions?: RolePermission[];   
   users?: UserRole[];
+  _count?: {
+    users: number;
+    permissions: number;
+  };
 }
-
 export interface Permission {
   id?: number;
   code: string;

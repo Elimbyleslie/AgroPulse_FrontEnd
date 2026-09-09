@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useCallback } from "react";
 import { useAppDispatch, useAppSelector } from "../../../hooks/store";
 import {
@@ -32,7 +30,6 @@ import {
 import {
   selectProductions,
   selectProductionsLoading,
-  selectProductionStatsData,
 } from "../../../features/productions/productionSelectors";
 
 import { selectCurrentFarm } from "../../../store/farm/slice";
@@ -247,10 +244,10 @@ const LotAnalysis: React.FC = () => {
   const currentFarm = useAppSelector(selectCurrentFarm);
   const currentUser = useAppSelector((state) => state.authentification?.auth?.user);
   const productions = useAppSelector(selectProductions);
-  const stats = useAppSelector(selectProductionStatsData);
   const isLoading = useAppSelector(selectProductionsLoading);
 
   const farmId = currentFarm?.id;
+
 
   const [groupBy, setGroupBy] = useState<GroupBy>("lot");
   const [sortBy, setSortBy] = useState<SortBy>("total");

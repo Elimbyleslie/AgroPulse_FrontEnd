@@ -235,8 +235,11 @@ const ProfitLossDashboard: React.FC = () => {
   }, [expenses, sales, period, customFrom, customTo, currentYear, now]);
 
   // ── Aggregated KPIs ─────────────────────────────────────────────────────────
+  // ⚠️ Corrigé : Sale.total est `number | null | undefined` dans le modèle.
+  // `v.total` sans garde produisait NaN dès qu'une seule vente avait un total
+  // null/undefined, ce qui cassait totalRevenue, netProfit et margin en cascade.
   const kpis = useMemo(() => {
-    const totalRevenue = filteredSales.reduce((s, v) => s + v.total, 0);
+    const totalRevenue = filteredSales.reduce((s, v) => s + (v.total ?? 0), 0);
     const totalExpenses = filteredExpenses.reduce((s, e) => s + e.totalAmount, 0);
     const netProfit = totalRevenue - totalExpenses;
     const margin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : netProfit < 0 ? -100 : 0;
@@ -248,7 +251,8 @@ const ProfitLossDashboard: React.FC = () => {
     return Array.from({ length: 12 }, (_, m) => {
       const mm = String(m + 1).padStart(2, "0");
       const prefix = `${currentYear}-${mm}`;
-      const revenue = sales.filter((s) => s.date?.startsWith(prefix)).reduce((s, v) => s + v.total, 0);
+      // ⚠️ Même garde `?? 0` que ci-dessus, nécessaire ici aussi.
+      const revenue = sales.filter((s) => s.date?.startsWith(prefix)).reduce((s, v) => s + (v.total ?? 0), 0);
       const exp = expenses.filter((e) => e.date?.startsWith(prefix)).reduce((s, v) => s + v.totalAmount, 0);
       return { month: MONTHS_FR[m], revenue, expenses: exp, profit: revenue - exp };
     });
@@ -294,10 +298,8 @@ const ProfitLossDashboard: React.FC = () => {
   function fmtDate(date: string): React.ReactNode {
     if (!date) return "";
     try {
-      // accept dates like YYYY-MM-DD or full ISO strings
       const d = new Date(date);
       if (isNaN(d.getTime())) return date;
-      // e.g. "12 févr. 2024" -> keep short month in fr-FR
       return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", year: "numeric" }).format(d);
     } catch {
       return date;

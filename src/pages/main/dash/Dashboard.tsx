@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useAppSelector, useAppDispatch } from "../../../hooks/store";
 import {
   Dog,
@@ -11,9 +11,6 @@ import {
   Filter,
   FileText,
   Download,
-  Layers,
-  Grid3x3,
-  Users as UsersIcon,
   Baby,
   Wheat,
   Wallet,
@@ -43,7 +40,7 @@ import EmptyDashboard from "./EmptyDashboard";
 import StatCard from "../../../components/UI/startCard";
 import Modal from "../../../components/UI/Modal";
 import AnimalForm from "../../../components/Modal/AnimalForm";
-import WeatherWidget from "../../../components/UI/WeatherWidget"; // adapte le chemin réel
+import WeatherWidget from "../../../components/UI/WeatherWidget"; 
 
 import { getAllAnimals } from "../../../store/animal/action";
 import { fetchAlertsByFarmId } from "../../../store/alerts/action";
@@ -51,20 +48,16 @@ import { fetchWithAuthOrganizations } from "../../../store/organization/action";
 import { getAllFarms } from "../../../store/farm/action";
 import { fetchProductions, fetchProductionStats } from "../../../store/production/action";
 import { fetchBirths } from "../../../store/birth/action";
-import { fetchFeedStock } from "../../../store/alimentations/feedstockAct"; // adapte le chemin réel
+import { fetchFeedStock } from "../../../store/alimentations/feedstockAct";
 import { getAllExpenses, getAllSales } from "../../../store/gestionFinanciere/action";
 
 import { selectCurrentFarm } from "../../../store/farm/slice";
 import { LoadingType } from "../../../models/store";
 import { StockStatus } from "../../../models/alimentation";
 
-// Import des composants de gestion existants
-import BarnList from "../barnList";
-import LotDashboard from "../lotList";
-import PenList from "../../../components/Modal/Pen/PenList";
-import HerdList from "../../../components/Modal/Herd/HerdList";
 
-type TabType = "overview" | "barns" | "lots" | "pens" | "herds";
+
+type TabType = "overview";
 
 function MainDashboard() {
   const dispatch = useAppDispatch();
@@ -243,10 +236,12 @@ function MainDashboard() {
     [filteredFeedStock]
   );
 
-  const totalStockValue = useMemo(
-    () => filteredFeedStock.reduce((acc: number, f: any) => acc + (f.totalValue ?? 0), 0),
-    [filteredFeedStock]
-  );
+  //calculer la valeur du stock alimentaire  en mutipliant la quantité par le prix unitaire
+  const totalStockValue = useMemo(() => {
+    return filteredFeedStock.reduce((acc: number, f: any) => {
+      return acc + (f.quantity ?? 0) * (f.unitPrice ?? 0);
+    }, 0);
+  }, [filteredFeedStock]);
 
   // ── Calculs Finance ──
   const filteredExpenses = useMemo(() => {
@@ -271,10 +266,6 @@ function MainDashboard() {
   // Configuration des onglets
   const tabs = [
     { id: "overview" as TabType, label: "Vue d'ensemble", icon: LayoutDashboard, badge: filteredAnimals.length },
-    { id: "barns" as TabType, label: "Bâtiments", icon: Home, badge: null },
-    { id: "lots" as TabType, label: "Lots", icon: Layers, badge: null },
-    { id: "pens" as TabType, label: "Enclos", icon: Grid3x3, badge: null },
-    { id: "herds" as TabType, label: "Troupeaux", icon: UsersIcon, badge: null },
   ];
 
   const dashboardAlerts = allStoreAlerts.filter((alert) => {
@@ -321,7 +312,7 @@ function MainDashboard() {
     if (farmId && !birthLoading && births.length === 0) {
       dispatch(fetchBirths({ farmId, page: 1, limit: 50 }));
     }
-  }, [dispatch, farmId]); // volontairement sans birthLoading/births.length pour éviter une boucle
+  }, [dispatch, farmId]);
 
   // ── Stock alimentation ──
   useEffect(() => {
@@ -340,7 +331,7 @@ function MainDashboard() {
     }
   }, [dispatch, farmId, expenseStatus, saleStatus]);
 
-  if (organizations.length === 0 || farms.length === 0) {
+  if (organizations.length === 0 || farms.length === 0 || allAnimals.length === 0) {
     return <EmptyDashboard />;
   }
 
@@ -671,11 +662,6 @@ function MainDashboard() {
             </div>
           </>
         )}
-
-        {activeTab === "barns" && <BarnList farmId={currentFarmId} />}
-        {activeTab === "lots" && <LotDashboard farmId={currentFarmId} />}
-        {activeTab === "pens" && <PenList farmId={currentFarmId} />}
-        {activeTab === "herds" && <HerdList farmId={currentFarmId} />}
       </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Enregistrer un nouvel animal">

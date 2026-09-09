@@ -45,7 +45,6 @@ const statusConfig: Record<string, { label: string; cls: string }> = {
 };
 
 const deriveStatus = (item: Inventory): keyof typeof statusConfig => {
-  if (item.status) return item.status as keyof typeof statusConfig;
   if (item.expiryDate && new Date(item.expiryDate) < new Date()) return "EXPIRED";
   if (item.quantity <= 0) return "OUT_OF_STOCK";
   if (item.minQuantity != null && item.quantity <= item.minQuantity) return "LOW_STOCK";
@@ -105,7 +104,7 @@ const InventoryFormModal: React.FC<{
 
   const [form, setForm] = useState({
     name: initial?.name || "",
-    category: initial?.category || InventoryCategory.FEED,
+    category: initial?.category || "",
     quantity: initial?.quantity ?? ("" as any),
     unit: initial?.unit || "kg",
     minQuantity: initial?.minQuantity ?? ("" as any),
@@ -285,12 +284,12 @@ const InventoryGeneralDashboard: React.FC = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    if (farmId) dispatch(fecthInventory(farmId));
+    if (farmId) dispatch(fecthInventory({farmId}));
   }, [dispatch, farmId]);
 
   const refresh = useCallback(() => {
     if (farmId) {
-      dispatch(fecthInventory(farmId));
+      dispatch(fecthInventory({farmId}));
       toast.info("Données actualisées");
     }
   }, [dispatch, farmId]);

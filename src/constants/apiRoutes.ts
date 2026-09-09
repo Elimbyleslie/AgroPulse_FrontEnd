@@ -125,7 +125,9 @@ export const ROUTES = {
   ANIMAL_TREATMENT_CREATE: "animal-treatments",
   ANIMAL_TREATMENT_UPDATE: (id: string | number) => `animal-treatments/${id}`,
   ANIMAL_TREATMENT_DELETE: (id: string | number) => `animal-treatments/${id}`,
+  ANIMAL_TREATMENT_GET_BY_ID:  "animal-treatments",
 
+  
   ANIMAL_VACCINATION_LIST: "animal-vaccinations",
   ANIMAL_VACCINATION_CREATE: "animal-vaccinations",
   ANIMAL_VACCINATION_UPDATE: (id: string | number) =>
@@ -157,6 +159,12 @@ export const ROUTES = {
   ANIMAL_FEEDING_UPDATE: (id: string | number) => `animal-feedings/${id}`,
   ANIMAL_FEEDING_DELETE: (id: string | number) => `animal-feedings/${id}`,
 
+  ANIMAL_HEALTH_RECORD: "animal-health-records",
+  ANIMAL_HEALTH_RECORD_CREATE: "animal-health-records",
+  ANIMAL_HEALTH_RECORD_UPDATE: (id: string | number) => `animal-health-records/${id}`,
+  ANIMAL_HEALTH_RECORD_DELETE: (id: string | number) => `animal-health-records/${id}`,
+  ANIMAL_HEALTH_RECORD_GET_BY_ID: "animal-health-records",
+
   ANIMAL_FEEDING_GET_BY_ID: "animal-feedings",
 
   FEEDING_PLAN_LIST: "feedingPlan",
@@ -181,6 +189,11 @@ export const ROUTES = {
   FARM_TASK_CREATE: "FarmTasks",
   FARM_TASK_UPDATE: (id: string | number) => `FarmTasks/${id}`,
   FARM_TASK_DELETE: (id: string | number) => `FarmTasks/${id}`,
+
+  FARM_USER_LIST: "farm-users",
+  FARM_USER_CREATE: "farm-users",
+  FARM_USER_UPDATE: (id: string | number) => `farm-users/${id}`,
+  FARM_USER_DELETE: (id: string | number) => `farm-users/${id}`,
 
   BARN_LIST: "barns",
   BARN_CREATE: "barns",
@@ -248,7 +261,7 @@ export const ROUTES = {
   PAYMENT_CREATE: "payments",
   PAYMENT_UPDATE: (id: string | number) => `payments/${id}`,
   PAYMENT_DELETE: (id: string | number) => `payments/${id}`,
-  PAYMENT_GET_BY_ID: "payments",
+  PAYMENT_GET_BY_ID: (id: number | string) => `invoices/${id}`,
 
   PURCHASE_LIST: "purchases",
   PURCHASE_CREATE: "purchases",
@@ -337,12 +350,19 @@ export const ROUTES = {
     `reproduction-cycles/${id}`,
   REPRODUCTIONCYCLE_GET_BY_ID: (id: string | number) =>
     `reproduction-cycles/${id}`,
-
-  PEDIGREE_LIST: "pedigrees",
+  
+  // ==================== PEDIGREE ====================
   PEDIGREE_CREATE: "pedigrees",
-  PEDIGREE_UPDATE: (id: string | number) => `pedigrees/${id}`,
-  PEDIGREE_DELETE: (id: string | number) => `pedigrees/${id}`,
-  PEDIGREE_GET_BY_ID: (id: string | number) => `pedigrees/${id}`,
+  PEDIGREE_GET_BY_ID: (animalId: string | number) => `pedigrees/${animalId}`,
+  PEDIGREE_UPDATE: (animalId: string | number) => `pedigrees/${animalId}`,
+  PEDIGREE_DELETE: (animalId: string | number) => `pedigrees/${animalId}`,
+  PEDIGREE_TREE: (animalId: string | number, generations = 3) =>
+    `pedigrees/${animalId}/tree?generations=${generations}`,
+  PEDIGREE_CONSANGUINITY: (
+    animal1Id: string | number,
+    animal2Id: string | number
+  ) => `pedigrees/consanguinity/${animal1Id}/${animal2Id}`,
+
 
   GESTATION_CHECKUPS_LIST: "gestation-checkups",
   GESTATION_CHECKUP_CREATE: "gestation-checkups",
@@ -406,13 +426,13 @@ export const ROUTES = {
   CREATE_INVOICES: "invoices",
   UPDATE_INVOICES: (id: string | number) => `invoices/${id}`,
   DELETE_INVOICES: (id: string | number) => `invoices/${id}`,
-  GET_INVOICES_BY_ID: "invoices",
+  GET_INVOICE_BY_ID: (id: number | string) => `invoices/${id}`,
 
   LIST_PAYMENTS: "payments",
   CREATE_PAYMENTS: "payments",
   UPDATE_PAYMENTS: (id: string | number) => `payments/${id}`,
   DELETE_PAYMENTS: (id: string | number) => `payments/${id}`,
-  GET_PAYMENTS_BY_ID: "payments",
+  GET_PAYMENTS_BY_ID: (id: string | number) => `payments/${id}`,
 
   LIST_ROLES: "roles",
   CREATE_ROLE: "roles",
@@ -448,9 +468,9 @@ export const ROUTES = {
   CREATE_NOTIFICATION: "notifications",
   UPDATE_NOTIFICATION: (id: string | number) => `notifications/${id}`,
   DELETE_NOTIFICATION: (id: string | number) => `notifications/${id}`,
-  MARK_AS_READ: (id: string | number) => `notifications/${id}/mark-as-read`,
-  MARK_AS_UNREAD: (id: string | number) => `notifications/${id}/mark-as-unread`,
-  MARK_ALL_AS_READ: "notifications/mark-all-as-read",
+  MARK_AS_READ: (id: string | number) => `notifications/${id}/read`,
+  MARK_AS_UNREAD: (id: string | number) => `notifications/${id}/unread`,
+  MARK_ALL_AS_READ: "notifications/read-all",
   GET_UNREAD_COUNT: "notifications/unread-count",
 
   LIST_ACTIVITY_LOGS: "activity-logs",
@@ -464,7 +484,18 @@ export const ROUTES = {
   CREATE_SETTINGS: "settings",
   UPDATE_SETTINGS: (id: string | number) => `settings/${id}`,
   DELETE_SETTINGS: (id: string | number) => `settings/${id}`,
+
+
+// ── Audit ────────────────────────────────────────────────────────────────────
+LIST_AUDITS: "audit",
+GET_AUDIT_BY_ID: (id: string | number) => `audit/${id}`,
+SEARCH_AUDITS: "audit/search",
+AUDIT_STATS: "audit/stats",
+RECENT_ACTIVITIES: "audit/recent",
+EXPORT_AUDITS: "audit/export",
+
 };
+
 
 // src/constants/routes.ts
 export const SUBSCRIPTION_ROUTES = {
@@ -483,3 +514,13 @@ export const SUBSCRIPTION_ROUTES = {
 
   DELETE: (id: string | number) => `subscriptions/${id}`,
 } as const;
+
+
+// constants/apiRoutes.ts
+export const SUBSCRIPTION_PAYMENT_ROUTES = {
+  LIST: "subcription-Payments",
+  CREATE: "subcription-Payments",
+  GET_BY_ID: (id: number | string) => `subcription-Payments/${id}`,
+  UPDATE_STATUS: (id: number | string) => `subcription-Payments/${id}`,
+  DELETE: (id: number | string) => `subcription-Payments/${id}`,
+};

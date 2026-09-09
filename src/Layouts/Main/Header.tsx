@@ -13,6 +13,7 @@ import { fetchWithAuthOrganizations } from "../../store/organization/action";
 import { selectOrganizations } from "../../store/organization/slice";
 import {
   fetchNotifications,
+  getUnreadCount,
   markNotificationAsRead,
   markAllNotificationsAsRead,
 } from "../../store/administration/action";
@@ -76,13 +77,21 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
     }
   }, [dispatch, organizations.length]);
 
-  // Charge le compteur/liste de notifications une fois au montage
   useEffect(() => {
     if (!notifLoadedRef.current) {
       dispatch(fetchNotifications({ limit: 10 }));
       notifLoadedRef.current = true;
     }
   }, [dispatch]);
+
+  useEffect(() => {
+  if (!notifLoadedRef.current) {
+    dispatch(fetchNotifications({ limit: 10 }));
+    dispatch(getUnreadCount());
+    notifLoadedRef.current = true;
+  }
+}, [dispatch]);
+
 
   const currentOrg = organizations[0]?.name ?? null;
 
@@ -196,7 +205,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
               <Bell size={20} />
               {unreadCount > 0 && (
                 <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 bg-red-500 rounded-full border-2 border-white text-[9px] text-white font-bold flex items-center justify-center">
-                  {unreadCount > 9 ? "9+" : unreadCount}
+                  {unreadCount > 4 ? "4+" : unreadCount}
                 </span>
               )}
             </button>

@@ -68,7 +68,6 @@ const AuthSlice = createSlice({
 
     setUserSession: (
       state,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       action: PayloadAction<{ token: string; user?: any }>,
     ) => {
       state.auth.token = action.payload.token;
@@ -374,5 +373,9 @@ export const selectManagerId = selectUserId;
 export const selectUserOrganizations = (state: RootState) =>
   state.authentification.auth.user?.ownedOrganizations ||
   state.authentification.auth.user?.memberOrganizations;
+
+export const selectAccessToken = (state: RootState) =>
+  state.authentification.auth.token;
+
 
 export default AuthSlice;

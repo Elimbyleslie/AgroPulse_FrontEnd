@@ -41,8 +41,20 @@ import { Role, Permission } from "../../../models/UserRolePermission";
 
 const Spinner = ({ className = "w-4 h-4" }: { className?: string }) => (
   <svg className={`animate-spin ${className}`} viewBox="0 0 24 24">
-    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    <circle
+      className="opacity-25"
+      cx="12"
+      cy="12"
+      r="10"
+      stroke="currentColor"
+      strokeWidth="4"
+      fill="none"
+    />
+    <path
+      className="opacity-75"
+      fill="currentColor"
+      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+    />
   </svg>
 );
 
@@ -67,10 +79,16 @@ const StatCard: React.FC<{
   bg: string;
 }> = ({ label, value, sub, icon, bg }) => (
   <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-start gap-4">
-    <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${bg}`}>{icon}</div>
+    <div
+      className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${bg}`}
+    >
+      {icon}
+    </div>
     <div className="flex-1 min-w-0">
       <p className="text-xs font-medium text-gray-400 mb-0.5">{label}</p>
-      <p className="text-lg font-black text-gray-900 leading-tight truncate">{value}</p>
+      <p className="text-lg font-black text-gray-900 leading-tight truncate">
+        {value}
+      </p>
       {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
     </div>
   </div>
@@ -91,12 +109,15 @@ const DeleteModal: React.FC<{
           <Trash2 className="w-5 h-5 text-rouge" />
         </div>
         <div>
-          <h3 className="text-base font-bold text-gray-900">Supprimer ce rôle ?</h3>
+          <h3 className="text-base font-bold text-gray-900">
+            Supprimer ce rôle ?
+          </h3>
           <p className="text-sm text-gray-500">{role.name}</p>
         </div>
       </div>
       <p className="text-sm text-gray-500 mb-5 bg-red-50 rounded-xl p-3 border border-red-100">
-        Les utilisateurs ayant ce rôle le <strong>perdront immédiatement</strong>. Action irréversible.
+        Les utilisateurs ayant ce rôle le{" "}
+        <strong>perdront immédiatement</strong>. Action irréversible.
       </p>
       <div className="flex gap-2">
         <button
@@ -139,7 +160,8 @@ const RoleFormModal: React.FC<{
     description: initial?.description ?? "",
   });
 
-  const set = (k: string, v: string) => setForm((prev) => ({ ...prev, [k]: v }));
+  const set = (k: string, v: string) =>
+    setForm((prev) => ({ ...prev, [k]: v }));
 
   const isValid = form.name.trim().length >= 2;
 
@@ -155,13 +177,19 @@ const RoleFormModal: React.FC<{
         await dispatch(
           updateRole({
             id: initial.id,
-            data: { name: form.name.trim(), description: form.description.trim() || undefined },
+            data: {
+              name: form.name.trim(),
+              description: form.description.trim() || undefined,
+            },
           }),
         ).unwrap();
         toast.success("Rôle mis à jour avec succès");
       } else {
         await dispatch(
-          createRole({ name: form.name.trim(), description: form.description.trim() || undefined }),
+          createRole({
+            name: form.name.trim(),
+            description: form.description.trim() || undefined,
+          }),
         ).unwrap();
         toast.success("Rôle créé avec succès");
       }
@@ -170,7 +198,10 @@ const RoleFormModal: React.FC<{
     } catch (err: any) {
       const apiError = extractApiError(err);
       let message = apiError.meta.message;
-      if (message?.toLowerCase().includes("existe") || message?.includes("409")) {
+      if (
+        message?.toLowerCase().includes("existe") ||
+        message?.includes("409")
+      ) {
         message = "Un rôle avec ce nom existe déjà.";
       }
       toast.error(message);
@@ -205,7 +236,10 @@ const RoleFormModal: React.FC<{
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-xl transition">
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-gray-100 rounded-xl transition"
+          >
             <X className="w-5 h-5 text-gray-400" />
           </button>
         </div>
@@ -275,12 +309,22 @@ const PermissionsModal: React.FC<{
   onToggle: (permissionId: number) => void;
   onClose: () => void;
 }> = ({ role, allPermissions, rolePermissions, loading, onToggle, onClose }) => {
-  const grouped = useMemo(() => groupPermissions(allPermissions), [allPermissions]);
-
   const isAssigned = (permissionId?: number) =>
     rolePermissions.some(
       (rp: any) => rp.permissionId === permissionId || rp.permission?.id === permissionId,
     );
+
+  const assignedPermissions = useMemo(
+    () => allPermissions.filter((p) => isAssigned(p.id)),
+    [allPermissions, rolePermissions],
+  );
+  const availablePermissions = useMemo(
+    () => allPermissions.filter((p) => !isAssigned(p.id)),
+    [allPermissions, rolePermissions],
+  );
+
+  const groupedAssigned = useMemo(() => groupPermissions(assignedPermissions), [assignedPermissions]);
+  const groupedAvailable = useMemo(() => groupPermissions(availablePermissions), [availablePermissions]);
 
   return (
     <div
@@ -306,42 +350,98 @@ const PermissionsModal: React.FC<{
           </button>
         </div>
 
-        <div className="p-6 space-y-5 overflow-y-auto">
+        <div className="p-6 space-y-6 overflow-y-auto">
           {loading && (
             <div className="flex items-center justify-center py-6 text-gray-400">
               <Spinner className="w-5 h-5" />
             </div>
           )}
+
           {!loading && allPermissions.length === 0 && (
             <p className="text-sm text-gray-400 text-center py-4">Aucune permission disponible</p>
           )}
-          {!loading &&
-            Object.entries(grouped).map(([group, perms]) => (
-              <div key={group}>
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{group}</p>
-                <div className="space-y-1.5">
-                  {perms.map((p) => (
-                    <label
-                      key={p.id}
-                      className="flex items-center justify-between px-3 py-2.5 rounded-xl border border-gray-100 hover:bg-gray-50 transition"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-700">{p.code}</p>
-                        {p.description && (
-                          <p className="text-xs text-gray-400 truncate">{p.description}</p>
-                        )}
+
+          {!loading && allPermissions.length > 0 && (
+            <>
+              {/* ── Permissions assignées ── */}
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  Permissions assignées ({assignedPermissions.length})
+                </p>
+                {assignedPermissions.length === 0 ? (
+                  <p className="text-sm text-gray-400 py-2">Aucune permission assignée</p>
+                ) : (
+                  Object.entries(groupedAssigned).map(([group, perms]) => (
+                    <div key={group} className="mb-3">
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase mb-1.5">
+                        {group}
+                      </p>
+                      <div className="space-y-1.5">
+                        {perms.map((p) => (
+                          <div
+                            key={p.id}
+                            className="flex items-center justify-between px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-700">{p.code}</p>
+                              {p.description && (
+                                <p className="text-xs text-gray-400 truncate">{p.description}</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => p.id && onToggle(p.id)}
+                              className="text-xs font-semibold text-rouge hover:underline flex-shrink-0 ml-3"
+                            >
+                              Retirer
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                      <input
-                        type="checkbox"
-                        checked={isAssigned(p.id)}
-                        onChange={() => p.id && onToggle(p.id)}
-                        className="accent-vert w-4 h-4 flex-shrink-0 ml-3"
-                      />
-                    </label>
-                  ))}
-                </div>
+                    </div>
+                  ))
+                )}
               </div>
-            ))}
+
+              {/* ── Permissions disponibles (non assignées) ── */}
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  Permissions disponibles ({availablePermissions.length})
+                </p>
+                {availablePermissions.length === 0 ? (
+                  <p className="text-sm text-gray-400 py-2">Toutes les permissions sont assignées</p>
+                ) : (
+                  Object.entries(groupedAvailable).map(([group, perms]) => (
+                    <div key={group} className="mb-3">
+                      <p className="text-[11px] font-semibold text-gray-400 uppercase mb-1.5">
+                        {group}
+                      </p>
+                      <div className="space-y-1.5">
+                        {perms.map((p) => (
+                          <div
+                            key={p.id}
+                            className="flex items-center justify-between px-3 py-2.5 rounded-xl border border-gray-100 hover:bg-gray-50 transition"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-700">{p.code}</p>
+                              {p.description && (
+                                <p className="text-xs text-gray-400 truncate">{p.description}</p>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => p.id && onToggle(p.id)}
+                              className="text-xs font-semibold text-vert hover:underline flex-shrink-0 ml-3"
+                            >
+                              Ajouter
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         <div className="px-6 py-4 border-t border-gray-100">
@@ -383,7 +483,10 @@ const RoleUsersModal: React.FC<{
             <p className="text-xs text-gray-400">{role.name}</p>
           </div>
         </div>
-        <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-xl transition">
+        <button
+          onClick={onClose}
+          className="p-1.5 hover:bg-gray-100 rounded-xl transition"
+        >
           <X className="w-5 h-5 text-gray-400" />
         </button>
       </div>
@@ -395,17 +498,28 @@ const RoleUsersModal: React.FC<{
           </div>
         )}
         {!loading && roleUsers.length === 0 && (
-          <p className="text-sm text-gray-400 text-center py-4">Aucun utilisateur avec ce rôle</p>
+          <p className="text-sm text-gray-400 text-center py-4">
+            Aucun utilisateur avec ce rôle
+          </p>
         )}
         {!loading &&
           roleUsers.map((ur: any) => (
-            <div key={ur.userId} className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-100">
+            <div
+              key={ur.userId}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-gray-100"
+            >
               <div className="w-8 h-8 rounded-full bg-emerald-100 text-vert flex items-center justify-center font-black text-xs flex-shrink-0">
                 {(ur.user?.name ?? "?").slice(0, 2).toUpperCase()}
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-700 truncate">{ur.user?.name ?? `#${ur.userId}`}</p>
-                {ur.user?.email && <p className="text-xs text-gray-400 truncate">{ur.user.email}</p>}
+                <p className="text-sm font-medium text-gray-700 truncate">
+                  {ur.user?.name ?? `#${ur.userId}`}
+                </p>
+                {ur.user?.email && (
+                  <p className="text-xs text-gray-400 truncate">
+                    {ur.user.email}
+                  </p>
+                )}
               </div>
             </div>
           ))}
@@ -493,12 +607,17 @@ const RolesPermissionsDashboard: React.FC = () => {
   const togglePermission = (permissionId: number) => {
     if (!permissionsRole?.id) return;
     const assigned = rolePermissions.some(
-      (rp: any) => rp.permissionId === permissionId || rp.permission?.id === permissionId,
+      (rp: any) =>
+        rp.permissionId === permissionId || rp.permission?.id === permissionId,
     );
     if (assigned) {
-      dispatch(removePermissionFromRole({ roleId: permissionsRole.id, permissionId }));
+      dispatch(
+        removePermissionFromRole({ roleId: permissionsRole.id, permissionId }),
+      );
     } else {
-      dispatch(assignPermissionToRole({ roleId: permissionsRole.id, permissionId }));
+      dispatch(
+        assignPermissionToRole({ roleId: permissionsRole.id, permissionId }),
+      );
     }
   };
 
@@ -544,9 +663,13 @@ const RolesPermissionsDashboard: React.FC = () => {
             <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
               <span>Administration</span>
               <ChevronRight className="w-3 h-3" />
-              <span className="text-gray-600 font-medium">Rôles &amp; Permissions</span>
+              <span className="text-gray-600 font-medium">
+                Rôles &amp; Permissions
+              </span>
             </div>
-            <h1 className="text-2xl font-black text-darkText tracking-tight">Rôles &amp; Permissions</h1>
+            <h1 className="text-2xl font-black text-darkText tracking-tight">
+              Rôles &amp; Permissions
+            </h1>
             <p className="text-sm text-gray-400 mt-0.5">
               Définissez les rôles et leurs droits d'accès
             </p>
@@ -635,7 +758,9 @@ const RolesPermissionsDashboard: React.FC = () => {
                       <Shield className="w-4 h-4 text-vert" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-gray-900 truncate">{role.name}</p>
+                      <p className="text-sm font-bold text-gray-900 truncate">
+                        {role.name}
+                      </p>
                       <p className="text-xs text-gray-400 truncate">
                         {role.description || "Aucune description"}
                       </p>
@@ -643,22 +768,22 @@ const RolesPermissionsDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => openPermissionsModal(role)}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-blue-50 text-bleu text-xs font-semibold hover:bg-blue-100 transition"
-                  >
-                    <Key className="w-3.5 h-3.5" />
-                    {role.permissions?.length ?? "—"} permission{(role.permissions?.length ?? 0) > 1 ? "s" : ""}
-                  </button>
-                  <button
-                    onClick={() => openUsersModal(role)}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-purple-50 text-purple-600 text-xs font-semibold hover:bg-purple-100 transition"
-                  >
-                    <UsersIcon className="w-3.5 h-3.5" />
-                    {role.users?.length ?? "—"} utilisateur{(role.users?.length ?? 0) > 1 ? "s" : ""}
-                  </button>
-                </div>
+                <button
+                  onClick={() => openPermissionsModal(role)}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-blue-50 text-bleu text-xs font-semibold hover:bg-blue-100 transition"
+                >
+                  <Key className="w-3.5 h-3.5" />
+                  {role._count?.permissions ?? 0} permission
+                  {(role._count?.permissions ?? 0) > 1 ? "s" : ""}
+                </button>
+                <button
+                  onClick={() => openUsersModal(role)}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-purple-50 text-purple-600 text-xs font-semibold hover:bg-purple-100 transition"
+                >
+                  <UsersIcon className="w-3.5 h-3.5" />
+                  {role._count?.users ?? 0} utilisateur
+                  {(role._count?.users ?? 0) > 1 ? "s" : ""}
+                </button>
 
                 <div className="flex items-center gap-1 justify-end pt-1 border-t border-gray-50">
                   <button

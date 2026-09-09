@@ -13,8 +13,6 @@ import type {
   UpdateGestationCheckupPayload,
   CreateGeneticPerformancePayload,
   UpdateGeneticPerformancePayload,
-  CreatePedigreePayload,
-  UpdatePedigreePayload,
 } from "../../models/reproduction";
 
 
@@ -405,87 +403,5 @@ export const deleteGestationCheckup = createAsyncThunk(
 
 // ==================== PEDIGREE ====================
 
-export const fetchPedigrees = createAsyncThunk(
-  "reproduction/fetchPedigrees",
-  async (
-    {
-      farmId,
-      page = 1,
-      limit = 20,
-    }: { farmId: number; page?: number; limit?: number },
-    { rejectWithValue },
-  ) => {
-    try {
-      const query = new URLSearchParams({
-        farmId: String(farmId),
-        page: String(page),
-        limit: String(limit),
-      });
-      return await fetchWithAuth(`${ROUTES.PEDIGREE_LIST}?${query}`);
-    } catch (error: any) {
-      return rejectWithValue(
-        error?.meta?.message || "Erreur lors de la récupération des pedigrees",
-      );
-    }
-  },
-);
 
-export const fetchPedigreeById = createAsyncThunk(
-  "reproduction/fetchPedigreeById",
-  async (id: number, { rejectWithValue }) => {
-    try {
-      return await fetchWithAuth(ROUTES.PEDIGREE_GET_BY_ID(id));
-    } catch (error: any) {
-      return rejectWithValue(
-        error?.meta?.message || "Erreur lors de la récupération du pedigree",
-      );
-    }
-  },
-);
 
-export const createPedigree = createAsyncThunk(
-  "reproduction/createPedigree",
-  async (payload: CreatePedigreePayload, { rejectWithValue }) => {
-    try {
-      return await fetchWithAuth(ROUTES.PEDIGREE_CREATE, {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-    } catch (error: any) {
-      return rejectWithValue(
-        error?.meta?.message || "Erreur lors de la création du pedigree",
-      );
-    }
-  },
-);
-
-export const updatePedigree = createAsyncThunk(
-  "reproduction/updatePedigree",
-  async ({ id, ...payload }: UpdatePedigreePayload, { rejectWithValue }) => {
-    try {
-      return await fetchWithAuth(ROUTES.PEDIGREE_UPDATE(id), {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      });
-    } catch (error: any) {
-      return rejectWithValue(
-        error?.meta?.message || "Erreur lors de la mise à jour du pedigree",
-      );
-    }
-  },
-);
-
-export const deletePedigree = createAsyncThunk(
-  "reproduction/deletePedigree",
-  async (id: number, { rejectWithValue }) => {
-    try {
-      return await fetchWithAuth(ROUTES.PEDIGREE_DELETE(id), {
-        method: "DELETE",
-      });
-    } catch (error: any) {
-      return rejectWithValue(
-        error?.meta?.message || "Erreur lors de la suppression du pedigree",
-      );
-    }
-  },
-);

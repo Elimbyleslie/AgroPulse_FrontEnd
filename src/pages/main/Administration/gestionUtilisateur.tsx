@@ -38,10 +38,11 @@ import {
   selectUserRoles,
   selectUserRolesState,
 } from "../../../store/auth/userSlice";
-import { fetchRoles } from "../../../store/Role&Permission/action";
+import { fetchRoles,  } from "../../../store/Role&Permission/action";
 import { selectRoles } from "../../../store/Role&Permission/slice";
 import SelectInput from "../../../components/UI/SelectInput";
 import { User } from "../../../models/user";
+import { Role ,UserRole} from "../../../models/UserRolePermission";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -490,18 +491,30 @@ const UserFormModal: React.FC<{
   );
 };
 
-// ── Role Modal ────────────────────────────────────────────────────────────────
+// ── Role Modal (revu) ─────────────────────────────────────────────────────────
+// Affiche clairement le(s) rôle(s) actuel(s) de l'utilisateur, permet de le/les
+// retirer, et propose d'assigner un autre rôle disponible.
 
 const RoleModal: React.FC<{
   user: User;
-  roles: any[];
-  userRoles: any[];
+  roles: Role[];
+  userRoles: UserRole[];
   loading: boolean;
-  onToggle: (roleId: number) => void;
+  onAssign: (roleId: number) => void;
+  onRemove: (roleId: number) => void;
   onClose: () => void;
-}> = ({ user, roles, userRoles, loading, onToggle, onClose }) => {
-  const isAssigned = (roleId: number) =>
-    userRoles.some((ur: any) => ur.roleId === roleId || ur.role?.id === roleId);
+}> = ({ user, roles, userRoles, loading, onAssign, onRemove, onClose }) => {
+const isAssigned = (roleId: number) =>
+  userRoles.some((r: any) => r.id === roleId);
+
+  const assignedRoles = useMemo(
+    () => roles.filter((role: any) => isAssigned(role.id)),
+    [roles, userRoles],
+  );
+  const availableRoles = useMemo(
+    () => roles.filter((role: any) => !isAssigned(role.id)),
+    [roles, userRoles],
+  );
 
   return (
     <div
@@ -527,30 +540,68 @@ const RoleModal: React.FC<{
           </button>
         </div>
 
-        <div className="p-6 space-y-2 max-h-80 overflow-y-auto">
+        <div className="p-6 space-y-5 max-h-96 overflow-y-auto">
           {loading && (
             <div className="flex items-center justify-center py-6 text-gray-400">
               <Spinner className="w-5 h-5" />
             </div>
           )}
-          {!loading && roles.length === 0 && (
-            <p className="text-sm text-gray-400 text-center py-4">Aucun rôle disponible</p>
+
+          {!loading && (
+            <>
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  Rôle{assignedRoles.length > 1 ? "s" : ""} actuel{assignedRoles.length > 1 ? "s" : ""}
+                </p>
+                {assignedRoles.length === 0 ? (
+                  <p className="text-sm text-gray-400 py-2">Aucun rôle assigné</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {assignedRoles.map((role: any) => (
+                      <div
+                        key={role.id}
+                        className="flex items-center justify-between px-3 py-2.5 rounded-xl border border-emerald-100 bg-emerald-50"
+                      >
+                        <span className="text-sm font-semibold text-vert">{role.name}</span>
+                        <button
+                          onClick={() => onRemove(role.id)}
+                          className="text-xs font-semibold text-rouge hover:underline"
+                        >
+                          Retirer
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                  Assigner un autre rôle
+                </p>
+                {availableRoles.length === 0 ? (
+                  <p className="text-sm text-gray-400 py-2">Aucun autre rôle disponible</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {availableRoles.map((role: any) => (
+                      <div
+                        key={role.id}
+                        className="flex items-center justify-between px-3 py-2.5 rounded-xl border border-gray-100 hover:bg-gray-50 transition"
+                      >
+                        <span className="text-sm font-medium text-gray-700">{role.name}</span>
+                        <button
+                          onClick={() => onAssign(role.id)}
+                          className="text-xs font-semibold text-vert hover:underline"
+                        >
+                          Assigner
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
           )}
-          {!loading &&
-            roles.map((role: any) => (
-              <label
-                key={role.id}
-                className="flex items-center justify-between px-3 py-2.5 rounded-xl border border-gray-100 hover:bg-gray-50 transition"
-              >
-                <span className="text-sm font-medium text-gray-700">{role.name}</span>
-                <input
-                  type="checkbox"
-                  checked={isAssigned(role.id)}
-                  onChange={() => onToggle(role.id)}
-                  className="accent-vert w-4 h-4"
-                />
-              </label>
-            ))}
         </div>
 
         <div className="px-6 py-4 border-t border-gray-100">
@@ -577,6 +628,12 @@ const UsersManagementDashboard: React.FC = () => {
   const roles = useAppSelector(selectRoles);
   const userRoles = useAppSelector(selectUserRoles);
   const userRolesState = useAppSelector(selectUserRolesState);
+
+  // TODO: pointez ceci vers votre vrai selector d'auth (ex: selectAuthUser).
+  // Le cast en `any` évite une erreur de compilation en attendant.
+  const assignedBy = useAppSelector(
+    (state: any) => state.auth?.user?.userName || state.auth?.user?.email || "system",
+  );
 
   const isLoading = usersState.loading;
 
@@ -670,16 +727,28 @@ const UsersManagementDashboard: React.FC = () => {
     dispatch(getUserRoles(user.id));
   };
 
-  const toggleRole = (roleId: number) => {
+  const assignRole = (roleId: number) => {
     if (!roleModalUser) return;
-    const assigned = userRoles.some(
-      (ur: any) => ur.roleId === roleId || ur.role?.id === roleId,
-    );
-    if (assigned) {
-      dispatch(removeRoleFromUser({ id: roleModalUser.id, roleId }));
-    } else {
-      dispatch(assignRoleToUser({ id: roleModalUser.id, roleId }));
-    }
+    dispatch(assignRoleToUser({ id: roleModalUser.id, roleId, assignedBy }))
+      .unwrap()
+      .then(() => {
+        toast.success("Rôle assigné");
+        dispatch(getUserRoles(roleModalUser.id));
+        fetchData(); // garde la liste principale synchro
+      })
+      .catch(() => toast.error("Erreur lors de l'assignation du rôle"));
+  };
+
+  const removeRole = (roleId: number) => {
+    if (!roleModalUser) return;
+    dispatch(removeRoleFromUser({ id: roleModalUser.id, roleId }))
+      .unwrap()
+      .then(() => {
+        toast.success("Rôle retiré");
+        dispatch(getUserRoles(roleModalUser.id));
+        fetchData();
+      })
+      .catch(() => toast.error("Erreur lors du retrait du rôle"));
   };
 
   // ── Export CSV ──
@@ -994,7 +1063,8 @@ const UsersManagementDashboard: React.FC = () => {
           roles={roles}
           userRoles={userRoles}
           loading={userRolesState.loading}
-          onToggle={toggleRole}
+          onAssign={assignRole}
+          onRemove={removeRole}
           onClose={() => setRoleModalUser(null)}
         />
       )}

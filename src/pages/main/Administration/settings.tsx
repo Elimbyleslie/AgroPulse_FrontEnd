@@ -90,9 +90,9 @@ const PAYMENT_METHODS = [
   { label: "Carte bancaire", value: PaymentMethod.card },
   { label: "Mobile Money", value: PaymentMethod.mobile_money },
   { label: "Orange Money", value: PaymentMethod.orange_money },
-  { label: "PayPal", value: PaymentMethod.paypal },
+  { label: "Bank Transfer", value: PaymentMethod.bank_transfer },
   { label: "Espèces", value: PaymentMethod.cash },
-  { label: "Autre", value: PaymentMethod.others },
+  { label: "Autre", value: PaymentMethod.other },
 ];
 
 type TabKey = "general" | "units" | "farming" | "notifications" | "finance" | "appearance";

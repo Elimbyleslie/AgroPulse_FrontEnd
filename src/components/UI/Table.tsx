@@ -1,6 +1,4 @@
-import React from "react";
 
-// Typage des props
 interface TableProps {
   columns: string[];                // les en-têtes
   data: Record<string,string[] >[];      

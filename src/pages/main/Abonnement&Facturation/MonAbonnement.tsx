@@ -5,7 +5,6 @@ import {
   ChevronRight,
   CreditCard,
   Users,
-  HardDrive,
   PawPrint,
   CheckCircle2,
   XCircle,
@@ -15,6 +14,8 @@ import {
   Ban,
   Sparkles,
   Warehouse,
+  PauseCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -33,15 +34,15 @@ import {
 } from "../../../store/Abonnement&Facturation/slice";
 import {
   Plan,
-  RenewalType,
+  BillingInterval,
   SubscriptionStatus,
-  UnitStorage,
 } from "../../../models/abonnementFacturation";
+
 const useOrganizationId = (): number | undefined => {
-    const organizationId =useAppSelector((state)=>state.authentification.auth.user?.ownedOrganizations?.at(0)?.id);
-    console.log("Current organization ID:", organizationId); // Ajoutez cette ligne pour le débogage
-    return organizationId;
-   
+  const organizationId = useAppSelector(
+    (state) => state.authentification.auth.user?.ownedOrganizations?.at(0)?.id,
+  );
+  return organizationId;
 };
 
 const Spinner = ({ className = "w-4 h-4" }: { className?: string }) => (
@@ -63,7 +64,7 @@ const Spinner = ({ className = "w-4 h-4" }: { className?: string }) => (
   </svg>
 );
 
-const fmtDate = (d?: string | Date) =>
+const fmtDate = (d?: string | Date | null) =>
   d
     ? new Date(d).toLocaleDateString("fr-FR", {
         day: "2-digit",
@@ -75,6 +76,12 @@ const fmtDate = (d?: string | Date) =>
 const fmtNum = (n?: number | null, dec = 0) =>
   n != null ? Number(n).toFixed(dec).replace(".", ",") : "—";
 
+const fmtLimit = (n?: number | null) =>
+  n == null ? "Illimité" : fmtNum(n);
+
+const formatPrice = (value: number, currency = "XAF") =>
+  fmtNum(value) + " " + currency;
+
 const statusConfig: Record<
   string,
   { label: string; cls: string; icon: React.ReactNode }
@@ -83,6 +90,21 @@ const statusConfig: Record<
     label: "Actif",
     cls: "bg-emerald-50 text-vert border border-emerald-200",
     icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+  },
+  [SubscriptionStatus.TRIALING]: {
+    label: "Période d'essai",
+    cls: "bg-blue-50 text-bleu border border-blue-200",
+    icon: <Sparkles className="w-3.5 h-3.5" />,
+  },
+  [SubscriptionStatus.PAST_DUE]: {
+    label: "Paiement en retard",
+    cls: "bg-amber-50 text-amber-600 border border-amber-200",
+    icon: <AlertTriangle className="w-3.5 h-3.5" />,
+  },
+  [SubscriptionStatus.PAUSED]: {
+    label: "En pause",
+    cls: "bg-gray-100 text-gray-500 border border-gray-200",
+    icon: <PauseCircle className="w-3.5 h-3.5" />,
   },
   [SubscriptionStatus.CANCELLED]: {
     label: "Annulé",
@@ -96,15 +118,16 @@ const statusConfig: Record<
   },
 };
 
-const billingCycleLabels: Record<string, string> = {
-  MONTHLY: "Mensuel",
-  YEARLY: "Annuel",
+const billingIntervalLabels: Record<string, string> = {
+  [BillingInterval.MONTHLY]: "Mensuel",
+  [BillingInterval.YEARLY]: "Annuel",
 };
 
-const UNIT_LABEL: Record<UnitStorage, string> = {
-  [UnitStorage.MO]: "Mo",
-  [UnitStorage.GO]: "Go",
-  [UnitStorage.TO]: "To",
+const priceForInterval = (plan: Plan, interval: BillingInterval) => {
+  if (interval === BillingInterval.YEARLY) {
+    return plan.priceYearly ?? plan.priceMonthly;
+  }
+  return plan.priceMonthly;
 };
 
 const CancelModal: React.FC<{
@@ -160,12 +183,14 @@ const ChangePlanModal: React.FC<{
   plan: Plan;
   hasActiveSubscription: boolean;
   onClose: () => void;
-  onConfirm: (renewalType: RenewalType) => void;
+  onConfirm: (billingInterval: BillingInterval) => void;
   isLoading: boolean;
 }> = ({ plan, hasActiveSubscription, onClose, onConfirm, isLoading }) => {
-  const [renewalType, setRenewalType] = useState<RenewalType>(
-    RenewalType.AUTO,
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>(
+    BillingInterval.MONTHLY,
   );
+  const price = priceForInterval(plan, billingInterval);
+
   return (
     <div
       className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
@@ -186,16 +211,39 @@ const ChangePlanModal: React.FC<{
           </h2>
         </div>
         <div className="p-6 space-y-5">
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+              Cycle de facturation
+            </label>
+            <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
+              {[BillingInterval.MONTHLY, BillingInterval.YEARLY].map((bi) => (
+                <button
+                  key={bi}
+                  type="button"
+                  onClick={() => setBillingInterval(bi)}
+                  disabled={
+                    bi === BillingInterval.YEARLY && plan.priceYearly == null
+                  }
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed ${
+                    billingInterval === bi
+                      ? "bg-white text-vert shadow-sm"
+                      : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  {billingIntervalLabels[bi]}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
             <div className="flex items-baseline justify-between mb-2">
               <span className="font-bold text-gray-900">{plan.name}</span>
               <span className="text-lg font-black text-vert">
-                {fmtNum(plan.price)} F
+                {formatPrice(price, plan.currency)}
                 <span className="text-xs text-gray-400 font-medium">
                   {" "}
-                  /{" "}
-                  {billingCycleLabels[plan.billingCycle]?.toLowerCase() ||
-                    plan.billingCycle}
+                  / {billingIntervalLabels[billingInterval].toLowerCase()}
                 </span>
               </span>
             </div>
@@ -203,29 +251,20 @@ const ChangePlanModal: React.FC<{
           </div>
 
           {/* Récap des caractéristiques du plan avant confirmation */}
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex flex-col items-center text-center gap-1">
               <Users className="w-3.5 h-3.5 text-vert" />
               <span className="text-xs font-bold text-gray-800">
-                {plan.userLimit}
+                {fmtLimit(plan.maxUsers)}
               </span>
               <span className="text-[9px] text-gray-400 leading-tight">
                 Utilisateurs
               </span>
             </div>
             <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex flex-col items-center text-center gap-1">
-              <HardDrive className="w-3.5 h-3.5 text-bleu" />
-              <span className="text-xs font-bold text-gray-800">
-                {plan.storageLimit} {UNIT_LABEL[plan.unitStorage]}
-              </span>
-              <span className="text-[9px] text-gray-400 leading-tight">
-                Stockage
-              </span>
-            </div>
-            <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex flex-col items-center text-center gap-1">
               <PawPrint className="w-3.5 h-3.5 text-jaune" />
               <span className="text-xs font-bold text-gray-800">
-                {plan.animalLimit}
+                {fmtLimit(plan.maxAnimals)}
               </span>
               <span className="text-[9px] text-gray-400 leading-tight">
                 Animaux
@@ -234,29 +273,11 @@ const ChangePlanModal: React.FC<{
             <div className="bg-gray-50 rounded-xl p-2.5 border border-gray-100 flex flex-col items-center text-center gap-1">
               <Warehouse className="w-3.5 h-3.5 text-orange-400" />
               <span className="text-xs font-bold text-gray-800">
-                {plan.farmLimit}
+                {fmtLimit(plan.maxFarms)}
               </span>
               <span className="text-[9px] text-gray-400 leading-tight">
                 Fermes
               </span>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
-              Renouvellement
-            </label>
-            <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
-              {[RenewalType.AUTO, RenewalType.MANUAL].map((rt) => (
-                <button
-                  key={rt}
-                  type="button"
-                  onClick={() => setRenewalType(rt)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-semibold transition ${renewalType === rt ? "bg-white text-vert shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-                >
-                  {rt === RenewalType.AUTO ? "Automatique" : "Manuel"}
-                </button>
-              ))}
             </div>
           </div>
         </div>
@@ -268,7 +289,7 @@ const ChangePlanModal: React.FC<{
             Annuler
           </button>
           <button
-            onClick={() => onConfirm(renewalType)}
+            onClick={() => onConfirm(billingInterval)}
             disabled={isLoading}
             className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-vert text-white disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-dark_vert transition shadow-sm shadow-emerald-200"
           >
@@ -290,19 +311,14 @@ const MonAbonnementDashboard: React.FC = () => {
   const dispatch = useAppDispatch();
   const organizationId = useOrganizationId();
   const plans = useAppSelector(selectPlans);
-const subscriptionState = useAppSelector(selectSubscriptionState);
-const currentSubscription = useAppSelector(selectCurrentSubscription);
-
-console.log("📌 Subscription State complet :", subscriptionState);
-console.log("📌 Current Subscription (selector) :", currentSubscription);
-console.log("📌 Organization ID :", organizationId);
+  const currentSubscription = useAppSelector(selectCurrentSubscription);
   const { loading, actionLoading } = useAppSelector(selectSubscriptionState);
 
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [planToConfirm, setPlanToConfirm] = useState<Plan | null>(null);
 
   useEffect(() => {
-    dispatch(fetchPlans({ page: 1, limit: 50 }));
+    dispatch(fetchPlans({ page: 1, limit: 50, isPublic: true }));
     if (organizationId != null) {
       dispatch(fetchSubscriptions({ organizationId, page: 1, limit: 50 }));
     }
@@ -310,7 +326,9 @@ console.log("📌 Organization ID :", organizationId);
 
   const refresh = () => {
     if (organizationId == null) {
-      toast.error("Organisation introuvable — impossible d'actualiser les abonnements");
+      toast.error(
+        "Organisation introuvable — impossible d'actualiser les abonnements",
+      );
       return;
     }
     dispatch(fetchSubscriptions({ organizationId, page: 1, limit: 50 }));
@@ -326,15 +344,16 @@ console.log("📌 Organization ID :", organizationId);
   );
 
   const daysRemaining = useMemo(() => {
-    if (!currentSubscription?.endDate) return null;
+    if (!currentSubscription?.currentPeriodEnd) return null;
     const diff =
-      new Date(currentSubscription.endDate).getTime() - new Date().getTime();
+      new Date(currentSubscription.currentPeriodEnd).getTime() -
+      new Date().getTime();
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   }, [currentSubscription]);
 
   const isActive = currentSubscription?.status === SubscriptionStatus.ACTIVE;
 
-  const handleConfirmPlan = async (renewalType: RenewalType) => {
+  const handleConfirmPlan = async (billingInterval: BillingInterval) => {
     if (!planToConfirm) return;
     try {
       if (isActive && currentSubscription) {
@@ -342,7 +361,7 @@ console.log("📌 Organization ID :", organizationId);
         await dispatch(
           updateSubscription({
             id: currentSubscription.id,
-            data: { planId: planToConfirm.id, renewalType },
+            data: { planId: planToConfirm.id, billingInterval },
           }),
         ).unwrap();
         toast.success(`Abonnement mis à jour vers ${planToConfirm.name}`);
@@ -357,7 +376,7 @@ console.log("📌 Organization ID :", organizationId);
           createSubscription({
             organizationId,
             planId: planToConfirm.id,
-            renewalType,
+            billingInterval,
           }),
         ).unwrap();
         toast.success(`Abonnement ${planToConfirm.name} activé avec succès`);
@@ -403,7 +422,7 @@ console.log("📌 Organization ID :", organizationId);
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
-              <span>Paramètres</span>
+              <span>Abonnement</span>
               <ChevronRight className="w-3 h-3" />
               <span className="text-gray-600 font-medium">
                 Mon abonnement
@@ -460,13 +479,16 @@ console.log("📌 Organization ID :", organizationId);
                 <div className="p-6 space-y-5">
                   <div className="flex items-baseline justify-between flex-wrap gap-2">
                     <span className="text-3xl font-black text-gray-900">
-                      {fmtNum(currentPlan.price)} F
+                      {formatPrice(
+                        currentSubscription.amount,
+                        currentSubscription.currency,
+                      )}
                       <span className="text-sm text-gray-400 font-medium">
                         {" "}
                         /{" "}
-                        {billingCycleLabels[
-                          currentPlan.billingCycle
-                        ]?.toLowerCase() || currentPlan.billingCycle}
+                        {billingIntervalLabels[
+                          currentSubscription.billingInterval
+                        ]?.toLowerCase() || currentSubscription.billingInterval}
                       </span>
                     </span>
                     {daysRemaining != null && isActive && (
@@ -476,30 +498,20 @@ console.log("📌 Organization ID :", organizationId);
                     )}
                   </div>
 
-                  <div className="grid grid-cols-4 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center text-center gap-1">
                       <Users className="w-4 h-4 text-vert" />
                       <span className="text-sm font-bold text-gray-800">
-                        {currentPlan.userLimit}
+                        {fmtLimit(currentPlan.maxUsers)}
                       </span>
                       <span className="text-[10px] text-gray-400">
                         Utilisateurs
                       </span>
                     </div>
                     <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center text-center gap-1">
-                      <HardDrive className="w-4 h-4 text-bleu" />
-                      <span className="text-sm font-bold text-gray-800">
-                        {currentPlan.storageLimit}{" "}
-                        {UNIT_LABEL[currentPlan.unitStorage]}
-                      </span>
-                      <span className="text-[10px] text-gray-400">
-                        Stockage
-                      </span>
-                    </div>
-                    <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center text-center gap-1">
                       <PawPrint className="w-4 h-4 text-jaune" />
                       <span className="text-sm font-bold text-gray-800">
-                        {currentPlan.animalLimit}
+                        {fmtLimit(currentPlan.maxAnimals)}
                       </span>
                       <span className="text-[10px] text-gray-400">
                         Animaux
@@ -508,7 +520,7 @@ console.log("📌 Organization ID :", organizationId);
                     <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex flex-col items-center text-center gap-1">
                       <Warehouse className="w-4 h-4 text-orange-400" />
                       <span className="text-sm font-bold text-gray-800">
-                        {currentPlan.farmLimit}
+                        {fmtLimit(currentPlan.maxFarms)}
                       </span>
                       <span className="text-[10px] text-gray-400">
                         Fermes
@@ -519,18 +531,18 @@ console.log("📌 Organization ID :", organizationId);
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-xs text-gray-400 mb-0.5">
-                        Date de début
+                        Début de la période
                       </p>
                       <p className="font-semibold text-gray-800">
-                        {fmtDate(currentSubscription.startDate)}
+                        {fmtDate(currentSubscription.currentPeriodStart)}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-gray-400 mb-0.5">
-                        Date d'expiration
+                        Fin de la période
                       </p>
                       <p className="font-semibold text-gray-800">
-                        {fmtDate(currentSubscription.endDate)}
+                        {fmtDate(currentSubscription.currentPeriodEnd)}
                       </p>
                     </div>
                   </div>
@@ -538,12 +550,11 @@ console.log("📌 Organization ID :", organizationId);
                   <div className="flex items-center justify-between pt-4 border-t border-gray-100 flex-wrap gap-3">
                     <span className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-blue-50 text-bleu">
                       <Repeat className="w-3.5 h-3.5" />
-                      Renouvellement :{" "}
-                      {currentSubscription.renewalType === RenewalType.AUTO
-                        ? "Automatique"
-                        : "Manuel"}
+                      {currentSubscription.cancelAtPeriodEnd
+                        ? "Ne se renouvellera pas"
+                        : "Renouvellement automatique"}
                     </span>
-                    {isActive && (
+                    {isActive && !currentSubscription.cancelAtPeriodEnd && (
                       <button
                         onClick={() => setShowCancelModal(true)}
                         className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-red-50 text-rouge hover:bg-red-100 transition"
@@ -585,10 +596,7 @@ console.log("📌 Organization ID :", organizationId);
                           <p className="font-bold text-gray-900 text-sm">
                             {plan.name}
                           </p>
-                          <p className="text-xs text-gray-400">
-                            {billingCycleLabels[plan.billingCycle] ||
-                              plan.billingCycle}
-                          </p>
+                          <p className="text-xs text-gray-400">{plan.code}</p>
                         </div>
                         {isCurrent && (
                           <span className="text-[10px] font-bold bg-emerald-50 text-vert px-2 py-1 rounded-lg">
@@ -597,16 +605,21 @@ console.log("📌 Organization ID :", organizationId);
                         )}
                       </div>
 
-                      <p className="text-2xl font-black text-gray-900">
-                        {fmtNum(plan.price)} F
-                        <span className="text-xs text-gray-400 font-medium">
-                          {" "}
-                          /{" "}
-                          {billingCycleLabels[
-                            plan.billingCycle
-                          ]?.toLowerCase() || plan.billingCycle}
-                        </span>
-                      </p>
+                      <div>
+                        <p className="text-2xl font-black text-gray-900">
+                          {formatPrice(plan.priceMonthly, plan.currency)}
+                          <span className="text-xs text-gray-400 font-medium">
+                            {" "}
+                            /mois
+                          </span>
+                        </p>
+                        {plan.priceYearly != null && (
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            ou {formatPrice(plan.priceYearly, plan.currency)}{" "}
+                            /an
+                          </p>
+                        )}
+                      </div>
 
                       <p className="text-xs text-gray-500 line-clamp-2">
                         {plan.description}
@@ -614,21 +627,16 @@ console.log("📌 Organization ID :", organizationId);
 
                       <div className="flex flex-col gap-1.5 text-xs text-gray-500 pt-2 border-t border-gray-50">
                         <span className="flex items-center gap-1.5">
-                          <Users className="w-3.5 h-3.5" /> {plan.userLimit}{" "}
-                          utilisateurs
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <HardDrive className="w-3.5 h-3.5" />{" "}
-                          {plan.storageLimit} {UNIT_LABEL[plan.unitStorage]}{" "}
-                          de stockage
+                          <Users className="w-3.5 h-3.5" />{" "}
+                          {fmtLimit(plan.maxUsers)} utilisateurs
                         </span>
                         <span className="flex items-center gap-1.5">
                           <PawPrint className="w-3.5 h-3.5" />{" "}
-                          {plan.animalLimit} animaux
+                          {fmtLimit(plan.maxAnimals)} animaux
                         </span>
                         <span className="flex items-center gap-1.5">
                           <Warehouse className="w-3.5 h-3.5" />{" "}
-                          {plan.farmLimit} fermes
+                          {fmtLimit(plan.maxFarms)} fermes
                         </span>
                       </div>
 

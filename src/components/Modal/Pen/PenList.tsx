@@ -1,14 +1,15 @@
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '../../../hooks/store';
 import { getAllPens, deletePen } from '../../../store/pen/action';
-import { 
-  Grid3x3, 
-  Trash2, 
-  Plus, 
-  Search, 
-  X, 
-  Loader2, 
+import { getAllBarns } from '../../../store/barn/action';
+import {
+  Grid3x3,
+  Trash2,
+  Plus,
+  Search,
+  X,
+  Loader2,
   Users,
   Home
 } from 'lucide-react';
@@ -19,29 +20,53 @@ import { Pen } from '../../../models/pen';
 
 interface PenListProps {
   farmId: number;
+  initialBarnId?: number | null;
+  autoOpenCreate?: boolean;
+  onConsumedPrefill?: () => void;
 }
 
-const PenList: React.FC<PenListProps> = ({ farmId }) => {
+const PenList: React.FC<PenListProps> = ({
+  farmId,
+  initialBarnId = null,
+  autoOpenCreate = false,
+  onConsumedPrefill,
+}) => {
+
   const dispatch = useAppDispatch();
   const { entities, isLoading } = useAppSelector((state) => state.pen);
-  
+  const { entities: barnEntities } = useAppSelector((state: any) => state.barn);
+  const pens = Array.isArray(entities) ? entities : [];
+  const barns = Array.isArray(barnEntities) ? barnEntities : [];
+
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPen, setSelectedPen] = useState<Pen | null>(null);
+  const [createBarnId, setCreateBarnId] = useState<number | ''>('');
 
-  // Fonction de chargement des données
+  const barnId = selectedPen ? selectedPen.barnId : createBarnId;
+
   const fetchPens = useCallback((search: string) => {
     dispatch(getAllPens({ farmId, search, page: 1, limit: 50 }));
   }, [dispatch, farmId]);
 
-  // Effet pour la recherche en temps réel (Debounce de 500ms)
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       fetchPens(searchTerm);
     }, 500);
-
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm, fetchPens]);
+
+  useEffect(() => {
+    dispatch(getAllBarns({ farmId, limit: 100 }));
+  }, [dispatch, farmId]);
+
+    useEffect(() => {
+    if (autoOpenCreate && initialBarnId) {
+      setCreateBarnId(initialBarnId);
+      setIsModalOpen(true);
+      onConsumedPrefill?.();
+    }
+  }, [autoOpenCreate, initialBarnId, onConsumedPrefill]);
 
   const handleDelete = (id: number) => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer cet enclos ?")) {
@@ -57,11 +82,11 @@ const PenList: React.FC<PenListProps> = ({ farmId }) => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedPen(null);
+    setCreateBarnId('');
   };
 
   return (
     <div>
-      {/* HEADER & RECHERCHE */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
@@ -83,7 +108,7 @@ const PenList: React.FC<PenListProps> = ({ farmId }) => {
               className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-vert outline-none w-64 transition-all"
             />
           </div>
-          <button 
+          <button
             onClick={() => setIsModalOpen(true)}
             className="bg-vert text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-green-700 shadow-lg shadow-green-100 transition"
           >
@@ -92,15 +117,14 @@ const PenList: React.FC<PenListProps> = ({ farmId }) => {
         </div>
       </div>
 
-      {/* GRILLE D'ENCLOS */}
-      {isLoading && entities.length === 0 ? (
+      {isLoading && pens.length === 0 ? (
         <div className="flex justify-center py-20">
           <Loader2 className="animate-spin text-vert" size={40} />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           <AnimatePresence>
-            {(Array.isArray(entities) ? entities : []).map((pen) => (
+            {pens.map((pen) => (
               <motion.div
                 key={pen.id}
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -108,22 +132,17 @@ const PenList: React.FC<PenListProps> = ({ farmId }) => {
                 exit={{ opacity: 0, scale: 0.9 }}
                 className="bg-white rounded-3xl shadow-sm border border-gray-100 hover:border-vert hover:shadow-lg transition-all group overflow-hidden"
               >
-                {/* En-tête */}
                 <div className="relative h-24 bg-gradient-to-br from-purple-50 to-purple-100 flex items-center justify-center">
                   <Grid3x3 size={40} className="text-vert/30" />
                 </div>
 
-                {/* Contenu principal */}
                 <div className="p-5 space-y-3">
-                  {/* Nom et ID */}
                   <div>
                     <h3 className="font-bold text-lg text-gray-900 mb-1">{pen.name}</h3>
                     <span className="text-xs font-mono text-gray-400">#PEN-{pen.id}</span>
                   </div>
 
-                  {/* Informations */}
                   <div className="space-y-2 text-sm">
-                    {/* Bâtiment */}
                     <div className="flex items-center gap-2 text-gray-600">
                       <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
                         <Home size={14} className="text-vert" />
@@ -131,12 +150,11 @@ const PenList: React.FC<PenListProps> = ({ farmId }) => {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-gray-500">Bâtiment</p>
                         <p className="font-medium text-gray-900 truncate">
-                          #{pen.barnId}
+                          {barns.find((b: any) => b.id === pen.barnId)?.name ?? `#${pen.barnId}`}
                         </p>
                       </div>
                     </div>
 
-                    {/* Capacité */}
                     {pen.capacity && (
                       <div className="flex items-center gap-2 text-gray-600">
                         <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
@@ -144,23 +162,20 @@ const PenList: React.FC<PenListProps> = ({ farmId }) => {
                         </div>
                         <div className="flex-1">
                           <p className="text-xs text-gray-500">Capacité</p>
-                          <p className="font-bold text-gray-900">
-                            {pen.capacity} animaux
-                          </p>
+                          <p className="font-bold text-gray-900">{pen.capacity} animaux</p>
                         </div>
                       </div>
                     )}
                   </div>
 
-                  {/* Actions */}
                   <div className="flex gap-2 pt-3 border-t border-gray-50">
-                    <Button 
+                    <Button
                       onClick={() => handleEdit(pen)}
                       className="flex-1 text-vert font-medium text-sm hover:bg-purple-50 py-2 rounded-lg transition flex items-center justify-center gap-2"
                     >
                       Modifier
                     </Button>
-                    <Button 
+                    <Button
                       onClick={() => handleDelete(pen.id)}
                       className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
                     >
@@ -174,51 +189,62 @@ const PenList: React.FC<PenListProps> = ({ farmId }) => {
         </div>
       )}
 
-      {/* VIDE STATE */}
-      {!isLoading && entities.length === 0 && (
+      {!isLoading && pens.length === 0 && (
         <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-100">
           <div className="bg-purple-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <Grid3x3 className="text-purple-300" size={30} />
           </div>
           <p className="text-gray-500 font-medium">
-            {searchTerm 
+            {searchTerm
               ? 'Aucun enclos ne correspond à votre recherche.'
               : 'Aucun enclos enregistré pour cette ferme.'}
           </p>
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="mt-4 text-vert font-medium hover:underline"
-          >
+          <button onClick={() => setIsModalOpen(true)} className="mt-4 text-vert font-medium hover:underline">
             Créer votre premier enclos
           </button>
         </div>
       )}
 
-      {/* MODAL DE CRÉATION/MODIFICATION */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <motion.div 
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
-          >
+          <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
             <div className="p-6 border-b flex justify-between items-center">
               <h3 className="text-xl font-bold">
-                {selectedPen ? 'Modifier l\'enclos' : 'Nouvel enclos'}
+                {selectedPen ? "Modifier l'enclos" : 'Nouvel enclos'}
               </h3>
               <Button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600">
                 <X size={24} />
               </Button>
             </div>
+
+            {!selectedPen && (
+              <div className="px-6 pt-4">
+                <label className="text-xs font-semibold text-gray-500">Bâtiment</label>
+                <select
+                  value={createBarnId}
+                  onChange={(e) => setCreateBarnId(e.target.value ? Number(e.target.value) : '')}
+                  className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-vert bg-white"
+                >
+                  <option value="">Sélectionner un bâtiment</option>
+                  {barns.map((b: any) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="p-2">
-              <PenForm 
-                farmId={farmId}
-                pen={selectedPen}
-                onSuccess={() => {
-                  handleCloseModal();
-                  fetchPens('');
-                }} 
-              />
+              {(selectedPen || createBarnId) && (
+                <PenForm
+                  farmId={farmId}
+                  pen={selectedPen}
+                  barnId={Number(barnId)}
+                  onSuccess={() => {
+                    handleCloseModal();
+                    fetchPens('');
+                  }}
+                />
+              )}
             </div>
           </motion.div>
         </div>

@@ -410,7 +410,7 @@ const FormModal: React.FC<{
     label: `${s.name} — ${s.quantity} ${s.unit}${s.status ? ` (${s.status})` : ""}`,
   }));
 
-  const unitOptions = ["kg", "g", "L", "mL", "sac", "botte"].map((u) => ({
+  const unitOptions = ["kg", "g", "l", "ml", "sac", "botte"].map((u) => ({
     value: u,
     label: u,
   }));

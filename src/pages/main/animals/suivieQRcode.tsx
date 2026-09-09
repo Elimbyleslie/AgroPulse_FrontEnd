@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useEffect, useState } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { useNavigate } from "react-router-dom";
@@ -8,6 +7,14 @@ import { motion } from "framer-motion";
 const AnimalTracking: React.FC = () => {
   const navigate = useNavigate();
   const [scanResult, setScanResult] = useState<string | null>(null);
+
+
+  useEffect(() => {
+    if (scanResult) {
+      console.log("QR Code Scanné : ", scanResult);
+      }
+  }, [scanResult]);
+
 
   useEffect(() => {
     const scanner = new Html5QrcodeScanner(
@@ -22,7 +29,6 @@ const AnimalTracking: React.FC = () => {
 
     scanner.render(
       (decodedText) => {
-        // ✅ Succès : Le QR Code est lu
         setScanResult(decodedText);
         scanner.clear(); // On arrête la caméra
         

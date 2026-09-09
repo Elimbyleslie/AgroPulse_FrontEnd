@@ -1,16 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import type { AppDispatch, RootState } from "../../../store";  
+import type { AppDispatch, RootState } from "../../../store";
 import {
   fetchPlans,
   deletePlan,
-} from "../../../store/Abonnement&Facturation/action"; 
+} from "../../../store/Abonnement&Facturation/action";
 import {
   selectPlans,
   selectPlansPagination,
   selectSubscriptionState,
-} from "../../../store/Abonnement&Facturation/slice"; 
-import { Plan, BillingCycle, UnitStorage } from "../../../models/abonnementFacturation"; 
+} from "../../../store/Abonnement&Facturation/slice";
+import { Plan } from "../../../models/abonnementFacturation";
 import {
   Plus,
   Pencil,
@@ -22,11 +22,14 @@ import {
   PackageX,
   Package,
   Users,
-  HardDrive,
   PawPrint,
-  Clock,
-  Wallet,
   Warehouse,
+  CheckCircle2,
+  XCircle,
+  Eye,
+  EyeOff,
+  Hash,
+  Tag,
 } from "lucide-react";
 import PlanFormModal from "../../../components/Modal/PlanFormModal";
 import { toast } from "react-toastify";
@@ -51,26 +54,14 @@ const Spinner = ({ className = "w-4 h-4" }: { className?: string }) => (
   </svg>
 );
 
-const formatPrice = (value: number) =>
-  new Intl.NumberFormat("fr-FR").format(value) + " FCFA";
+const formatPrice = (value: number, currency = "XAF") =>
+  new Intl.NumberFormat("fr-FR").format(value) + " " + currency;
 
-type CycleFilter = BillingCycle | "all";
+const fmtLimit = (n?: number | null) =>
+  n == null ? "Illimité" : new Intl.NumberFormat("fr-FR").format(n);
 
-const CYCLE_LABEL: Record<BillingCycle, string> = {
-  [BillingCycle.MONTHLY]: "Mensuel",
-  [BillingCycle.YEARLY]: "Annuel",
-};
-
-const CYCLE_ICON: Record<BillingCycle, React.ElementType> = {
-  [BillingCycle.MONTHLY]: Clock,
-  [BillingCycle.YEARLY]: Wallet,
-};
-
-const UNIT_LABEL: Record<UnitStorage, string> = {
-  [UnitStorage.MO]: "Mo",
-  [UnitStorage.GO]: "Go",
-  [UnitStorage.TO]: "To",
-};
+type StatusFilter = "all" | "active" | "inactive";
+type VisibilityFilter = "all" | "public" | "private";
 
 // Palette tournante utilisant les couleurs de la charte : chaque plan reçoit
 // une couleur d'accent distincte pour se repérer facilement dans la liste.
@@ -140,7 +131,9 @@ const DetailModal: React.FC<{
   onClose: () => void;
   onEdit: () => void;
 }> = ({ plan, accent, onClose, onEdit }) => {
-  const CycleIcon = CYCLE_ICON[plan.billingCycle];
+  const featureEntries = plan.features
+    ? Object.entries(plan.features as Record<string, unknown>)
+    : [];
 
   return (
     <div
@@ -167,42 +160,68 @@ const DetailModal: React.FC<{
         </div>
 
         <div className="overflow-y-auto px-5 py-4 flex flex-col gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1 text-xs font-black px-2 py-1 rounded-lg bg-bg_dash text-text">
+              <Hash className="w-3 h-3" /> {plan.code}
+            </span>
+            <span
+              className={`inline-flex items-center gap-1 text-xs font-black px-2 py-1 rounded-lg ${
+                plan.isActive
+                  ? "bg-emerald-50 text-vert"
+                  : "bg-gray-100 text-gray-500"
+              }`}
+            >
+              {plan.isActive ? (
+                <CheckCircle2 className="w-3 h-3" />
+              ) : (
+                <XCircle className="w-3 h-3" />
+              )}
+              {plan.isActive ? "Actif" : "Inactif"}
+            </span>
+            <span
+              className={`inline-flex items-center gap-1 text-xs font-black px-2 py-1 rounded-lg ${
+                plan.isPublic
+                  ? "bg-blue-50 text-bleu"
+                  : "bg-gray-100 text-gray-500"
+              }`}
+            >
+              {plan.isPublic ? (
+                <Eye className="w-3 h-3" />
+              ) : (
+                <EyeOff className="w-3 h-3" />
+              )}
+              {plan.isPublic ? "Public" : "Privé"}
+            </span>
+          </div>
+
           {plan.description && (
             <p className="text-sm text-text leading-relaxed">
               {plan.description}
             </p>
           )}
 
-          <div className={`rounded-xl p-3 ${accent.bg}`}>
-            <p className={`text-xs font-black uppercase mb-1 ${accent.text}`}>
-              Cycle de facturation
-            </p>
-            <div className="flex items-center gap-2">
-              <CycleIcon className={`w-4 h-4 ${accent.text}`} />
-              <span className={`text-sm font-black ${accent.text}`}>
-                {CYCLE_LABEL[plan.billingCycle]}
-              </span>
-            </div>
-          </div>
-
-          <div className={`rounded-xl p-3 ${accent.bg}`}>
-            <p className={`text-xs font-black uppercase mb-0.5 ${accent.text}`}>
-              Prix
-            </p>
-            <p className={`text-2xl font-black ${accent.text}`}>
-              {formatPrice(plan.price)}
-            </p>
-          </div>
-
           <div className="grid grid-cols-2 gap-2">
-            <div className="bg-bg_dash rounded-xl p-3">
-              <p className="text-xs font-black text-text uppercase mb-0.5">
-                Durée
+            <div className={`rounded-xl p-3 ${accent.bg}`}>
+              <p className={`text-xs font-black uppercase mb-0.5 ${accent.text}`}>
+                Prix mensuel
               </p>
-              <p className="text-sm font-semibold text-darkText">
-                {plan.durationDays} jours
+              <p className={`text-xl font-black ${accent.text}`}>
+                {formatPrice(plan.priceMonthly, plan.currency)}
               </p>
             </div>
+            <div className={`rounded-xl p-3 ${accent.bg}`}>
+              <p className={`text-xs font-black uppercase mb-0.5 ${accent.text}`}>
+                Prix annuel
+              </p>
+              <p className={`text-xl font-black ${accent.text}`}>
+                {plan.priceYearly != null
+                  ? formatPrice(plan.priceYearly, plan.currency)
+                  : "—"}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
             <div className="bg-bg_dash rounded-xl p-3">
               <p className="text-xs font-black text-text uppercase mb-0.5">
                 Utilisateurs
@@ -210,18 +229,7 @@ const DetailModal: React.FC<{
               <div className="flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5 text-text" />
                 <p className="text-sm font-semibold text-darkText">
-                  {plan.userLimit}
-                </p>
-              </div>
-            </div>
-            <div className="bg-bg_dash rounded-xl p-3">
-              <p className="text-xs font-black text-text uppercase mb-0.5">
-                Stockage
-              </p>
-              <div className="flex items-center gap-1.5">
-                <HardDrive className="w-3.5 h-3.5 text-text" />
-                <p className="text-sm font-semibold text-darkText">
-                  {plan.storageLimit} {UNIT_LABEL[plan.unitStorage]}
+                  {fmtLimit(plan.maxUsers)}
                 </p>
               </div>
             </div>
@@ -232,22 +240,38 @@ const DetailModal: React.FC<{
               <div className="flex items-center gap-1.5">
                 <PawPrint className="w-3.5 h-3.5 text-text" />
                 <p className="text-sm font-semibold text-darkText">
-                  {plan.animalLimit}
+                  {fmtLimit(plan.maxAnimals)}
                 </p>
               </div>
             </div>
-            <div className="bg-bg_dash rounded-xl p-3 col-span-2">
+            <div className="bg-bg_dash rounded-xl p-3">
               <p className="text-xs font-black text-text uppercase mb-0.5">
                 Fermes
               </p>
               <div className="flex items-center gap-1.5">
                 <Warehouse className="w-3.5 h-3.5 text-text" />
                 <p className="text-sm font-semibold text-darkText">
-                  {plan.farmLimit}
+                  {fmtLimit(plan.maxFarms)}
                 </p>
               </div>
             </div>
           </div>
+
+          {featureEntries.length > 0 && (
+            <div className="bg-bg_dash rounded-xl p-3">
+              <p className="text-xs font-black text-text uppercase mb-1.5 flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5" /> Caractéristiques
+              </p>
+              <div className="flex flex-col gap-1">
+                {featureEntries.map(([key, value]) => (
+                  <p key={key} className="text-xs text-text">
+                    <span className="font-semibold text-darkText">{key}</span>{" "}
+                    : {String(value)}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="px-5 pb-5">
@@ -277,7 +301,9 @@ const GestionOffres: React.FC = () => {
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
-  const [cycleFilter, setCycleFilter] = useState<CycleFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [visibilityFilter, setVisibilityFilter] =
+    useState<VisibilityFilter>("all");
 
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<Plan | null>(null);
@@ -325,22 +351,28 @@ const GestionOffres: React.FC = () => {
     accentByPlanId.get(plan.id) ?? PLAN_ACCENTS[0];
 
   const filtered = list
-    .filter((p) => cycleFilter === "all" || p.billingCycle === cycleFilter)
+    .filter((p) => {
+      if (statusFilter === "active") return p.isActive;
+      if (statusFilter === "inactive") return !p.isActive;
+      return true;
+    })
+    .filter((p) => {
+      if (visibilityFilter === "public") return p.isPublic;
+      if (visibilityFilter === "private") return !p.isPublic;
+      return true;
+    })
     .filter((p) => {
       if (!searchTerm.trim()) return true;
       const q = searchTerm.trim().toLowerCase();
       return (
         p.name.toLowerCase().includes(q) ||
+        p.code.toLowerCase().includes(q) ||
         p.description?.toLowerCase().includes(q)
       );
     });
 
-  const monthlyCount = list.filter(
-    (p) => p.billingCycle === BillingCycle.MONTHLY,
-  ).length;
-  const yearlyCount = list.filter(
-    (p) => p.billingCycle === BillingCycle.YEARLY,
-  ).length;
+  const activeCount = list.filter((p) => p.isActive).length;
+  const publicCount = list.filter((p) => p.isPublic).length;
 
   if (!isSuperAdmin) {
     return (
@@ -369,9 +401,9 @@ const GestionOffres: React.FC = () => {
               Gestion des offres
             </h2>
             <p className="text-sm text-text font-medium">
-              {list.length} plan{list.length > 1 ? "s" : ""} · {monthlyCount}{" "}
-              mensuel{monthlyCount > 1 ? "s" : ""} · {yearlyCount} annuel
-              {yearlyCount > 1 ? "s" : ""}
+              {list.length} plan{list.length > 1 ? "s" : ""} · {activeCount}{" "}
+              actif{activeCount > 1 ? "s" : ""} · {publicCount} public
+              {publicCount > 1 ? "s" : ""}
             </p>
           </div>
         </div>
@@ -404,11 +436,11 @@ const GestionOffres: React.FC = () => {
       )}
 
       {/* Filtres */}
-      <div className="flex flex-col gap-2 bg-white p-4 rounded-2xl shadow-sm border border-btn/30">
+      <div className="flex flex-col gap-3 bg-white p-4 rounded-2xl shadow-sm border border-btn/30">
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text" />
           <input
-            placeholder="Rechercher un plan…"
+            placeholder="Rechercher un plan (nom, code, description)…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-9 py-2.5 bg-bg_dash border border-btn/40 rounded-xl text-sm font-medium text-darkText focus:outline-none focus:ring-2 focus:ring-bleu/40 transition-all"
@@ -422,36 +454,49 @@ const GestionOffres: React.FC = () => {
             </button>
           )}
         </div>
+
         <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={() => setCycleFilter("all")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase transition-all ${
-              cycleFilter === "all"
-                ? "bg-bleu text-white"
-                : "bg-bg_dash text-text hover:bg-btn/30"
-            }`}
-          >
-            Tous ({list.length})
-          </button>
-          {(Object.values(BillingCycle) as BillingCycle[]).map((c) => {
-            const Icon = CYCLE_ICON[c];
-            const count = list.filter((p) => p.billingCycle === c).length;
-            const active = cycleFilter === c;
-            return (
-              <button
-                key={c}
-                onClick={() => setCycleFilter(c)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase transition-all ${
-                  active
-                    ? "bg-modalBg text-white"
-                    : "bg-bg_dash text-text hover:bg-btn/30"
-                }`}
-              >
-                <Icon className="w-3 h-3" />
-                {CYCLE_LABEL[c]} ({count})
-              </button>
-            );
-          })}
+          {(
+            [
+              ["all", `Tous (${list.length})`],
+              ["active", `Actifs (${activeCount})`],
+              ["inactive", `Inactifs (${list.length - activeCount})`],
+            ] as [StatusFilter, string][]
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setStatusFilter(key)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase transition-all ${
+                statusFilter === key
+                  ? "bg-bleu text-white"
+                  : "bg-bg_dash text-text hover:bg-btn/30"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex gap-2 flex-wrap">
+          {(
+            [
+              ["all", `Visibilité : Toutes`],
+              ["public", `Publics (${publicCount})`],
+              ["private", `Privés (${list.length - publicCount})`],
+            ] as [VisibilityFilter, string][]
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setVisibilityFilter(key)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase transition-all ${
+                visibilityFilter === key
+                  ? "bg-modalBg text-white"
+                  : "bg-bg_dash text-text hover:bg-btn/30"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -468,52 +513,50 @@ const GestionOffres: React.FC = () => {
           </div>
           <p className="text-sm font-black text-text">Aucun plan trouvé</p>
           <p className="text-xs text-text">
-            {searchTerm || cycleFilter !== "all"
+            {searchTerm || statusFilter !== "all" || visibilityFilter !== "all"
               ? "Essayez de modifier vos filtres"
               : "Commencez par créer un plan d'abonnement"}
           </p>
-          {!searchTerm && cycleFilter === "all" && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="mt-1 flex items-center gap-2 px-4 py-2.5 bg-bleu text-white text-sm rounded-xl font-black hover:bg-darkBleu transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              Créer un plan
-            </button>
-          )}
+          {!searchTerm &&
+            statusFilter === "all" &&
+            visibilityFilter === "all" && (
+              <button
+                onClick={() => setShowForm(true)}
+                className="mt-1 flex items-center gap-2 px-4 py-2.5 bg-bleu text-white text-sm rounded-xl font-black hover:bg-darkBleu transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                Créer un plan
+              </button>
+            )}
         </div>
       ) : (
         <>
-          {/* Tableau responsive : colonnes secondaires masquées sous "lg"/"xl",
-              scroll horizontal en secours, et bascule complète en cartes sous "md". */}
+          {/* Tableau responsive */}
           <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-btn/30 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px]">
+              <table className="w-full min-w-[820px]">
                 <thead>
                   <tr className="bg-bg_dash border-b border-btn/30">
                     <th className="text-left px-4 py-3 text-xs font-black text-text uppercase tracking-wide">
                       Plan
                     </th>
                     <th className="text-left px-4 py-3 text-xs font-black text-text uppercase tracking-wide">
-                      Cycle
-                    </th>
-                    <th className="text-left px-4 py-3 text-xs font-black text-text uppercase tracking-wide">
-                      Prix
+                      Prix / mois
                     </th>
                     <th className="hidden lg:table-cell text-left px-4 py-3 text-xs font-black text-text uppercase tracking-wide">
-                      Durée
+                      Prix / an
                     </th>
                     <th className="hidden lg:table-cell text-left px-4 py-3 text-xs font-black text-text uppercase tracking-wide">
                       Utilisateurs
-                    </th>
-                    <th className="hidden xl:table-cell text-left px-4 py-3 text-xs font-black text-text uppercase tracking-wide">
-                      Stockage
                     </th>
                     <th className="hidden xl:table-cell text-left px-4 py-3 text-xs font-black text-text uppercase tracking-wide">
                       Animaux
                     </th>
                     <th className="hidden xl:table-cell text-left px-4 py-3 text-xs font-black text-text uppercase tracking-wide">
                       Fermes
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-black text-text uppercase tracking-wide">
+                      Statut
                     </th>
                     <th className="text-right px-4 py-3 text-xs font-black text-text uppercase tracking-wide">
                       Actions
@@ -523,7 +566,6 @@ const GestionOffres: React.FC = () => {
                 <tbody>
                   {filtered.map((plan) => {
                     const accent = getAccent(plan);
-                    const CycleIcon = CYCLE_ICON[plan.billingCycle];
                     return (
                       <tr
                         key={plan.id}
@@ -539,41 +581,52 @@ const GestionOffres: React.FC = () => {
                               <div className="font-semibold text-darkText truncate">
                                 {plan.name}
                               </div>
-                              {plan.description && (
-                                <div className="max-w-[220px] truncate text-xs text-text">
-                                  {plan.description}
-                                </div>
-                              )}
+                              <div className="text-xs text-text">
+                                {plan.code}
+                              </div>
                             </div>
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex items-center gap-1.5 text-xs font-black px-2 py-1 rounded-lg ${accent.bg} ${accent.text}`}
-                          >
-                            <CycleIcon className="w-3 h-3" />
-                            {CYCLE_LABEL[plan.billingCycle]}
+                          <span className={`text-sm font-black ${accent.text}`}>
+                            {formatPrice(plan.priceMonthly, plan.currency)}
                           </span>
+                        </td>
+                        <td className="hidden lg:table-cell px-4 py-3 text-sm text-text">
+                          {plan.priceYearly != null
+                            ? formatPrice(plan.priceYearly, plan.currency)
+                            : "—"}
+                        </td>
+                        <td className="hidden lg:table-cell px-4 py-3 text-sm text-text">
+                          {fmtLimit(plan.maxUsers)}
+                        </td>
+                        <td className="hidden xl:table-cell px-4 py-3 text-sm text-text">
+                          {fmtLimit(plan.maxAnimals)}
+                        </td>
+                        <td className="hidden xl:table-cell px-4 py-3 text-sm text-text">
+                          {fmtLimit(plan.maxFarms)}
                         </td>
                         <td className="px-4 py-3">
-                          <span className={`text-sm font-black ${accent.text}`}>
-                            {formatPrice(plan.price)}
-                          </span>
-                        </td>
-                        <td className="hidden lg:table-cell px-4 py-3 text-sm text-text">
-                          {plan.durationDays} j
-                        </td>
-                        <td className="hidden lg:table-cell px-4 py-3 text-sm text-text">
-                          {plan.userLimit}
-                        </td>
-                        <td className="hidden xl:table-cell px-4 py-3 text-sm text-text">
-                          {plan.storageLimit} {UNIT_LABEL[plan.unitStorage]}
-                        </td>
-                        <td className="hidden xl:table-cell px-4 py-3 text-sm text-text">
-                          {plan.animalLimit}
-                        </td>
-                        <td className="hidden xl:table-cell px-4 py-3 text-sm text-text">
-                          {plan.farmLimit}
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-lg ${
+                                plan.isActive
+                                  ? "bg-emerald-50 text-vert"
+                                  : "bg-gray-100 text-gray-500"
+                              }`}
+                            >
+                              {plan.isActive ? "Actif" : "Inactif"}
+                            </span>
+                            <span
+                              className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-1 rounded-lg ${
+                                plan.isPublic
+                                  ? "bg-blue-50 text-bleu"
+                                  : "bg-gray-100 text-gray-500"
+                              }`}
+                            >
+                              {plan.isPublic ? "Public" : "Privé"}
+                            </span>
+                          </div>
                         </td>
                         <td
                           className="px-4 py-3"
@@ -609,7 +662,6 @@ const GestionOffres: React.FC = () => {
           <div className="md:hidden flex flex-col gap-2">
             {filtered.map((plan) => {
               const accent = getAccent(plan);
-              const CycleIcon = CYCLE_ICON[plan.billingCycle];
               return (
                 <div
                   key={plan.id}
@@ -623,15 +675,28 @@ const GestionOffres: React.FC = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         <span
-                          className={`inline-flex items-center gap-1 text-xs font-black px-2 py-0.5 rounded-lg ${accent.bg} ${accent.text}`}
+                          className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-lg ${
+                            plan.isActive
+                              ? "bg-emerald-50 text-vert"
+                              : "bg-gray-100 text-gray-500"
+                          }`}
                         >
-                          <CycleIcon className="w-3 h-3" />
-                          {CYCLE_LABEL[plan.billingCycle]}
+                          {plan.isActive ? "Actif" : "Inactif"}
+                        </span>
+                        <span
+                          className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-lg ${
+                            plan.isPublic
+                              ? "bg-blue-50 text-bleu"
+                              : "bg-gray-100 text-gray-500"
+                          }`}
+                        >
+                          {plan.isPublic ? "Public" : "Privé"}
                         </span>
                       </div>
                       <p className="text-sm font-black text-darkText">
                         {plan.name}
                       </p>
+                      <p className="text-xs text-text">{plan.code}</p>
                       {plan.description && (
                         <p className="text-xs text-text mt-0.5 truncate">
                           {plan.description}
@@ -639,13 +704,13 @@ const GestionOffres: React.FC = () => {
                       )}
                       <p className="text-xs text-text mt-0.5">
                         <span className={`font-semibold ${accent.text}`}>
-                          {formatPrice(plan.price)}
+                          {formatPrice(plan.priceMonthly, plan.currency)}
                         </span>{" "}
-                        · {plan.durationDays} j · {plan.userLimit} util.
+                        /mois · {fmtLimit(plan.maxUsers)} util.
                       </p>
                       <p className="text-xs text-text mt-0.5">
-                        {plan.storageLimit} {UNIT_LABEL[plan.unitStorage]} ·{" "}
-                        {plan.animalLimit} animaux · {plan.farmLimit} fermes
+                        {fmtLimit(plan.maxAnimals)} animaux ·{" "}
+                        {fmtLimit(plan.maxFarms)} fermes
                       </p>
                     </div>
                     <div

@@ -1,5 +1,6 @@
 import { 
   LayoutDashboard, 
+  Mail,
   Beef, 
   Stethoscope, 
   Baby, 
@@ -22,18 +23,13 @@ import {
   LineChart,
   Shield,
   Building2,
-  
+  FileText,
   ClipboardList,
-  UserPlus
+  
 } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 
-// ⚠️ `roles` est déclaratif seulement : il ne filtre rien tant que le composant
-// qui consomme `menuItems` (la sidebar) ne l'utilise pas pour exclure les entrées
-// que l'utilisateur courant n'a pas le droit de voir. Sans ce filtrage, ces liens
-// restent visibles à tout le monde même si les pages elles-mêmes se protègent.
-// Valeurs attendues : "SUPER_ADMIN" | "ORG_OWNER" | "FARM_MANAGER" (adapter aux
-// noms de rôles réels côté backend). Absence de `roles` = visible à tous.
+
 export interface SubMenuItem {
   label: string;
   path: string;
@@ -56,13 +52,18 @@ export const menuItems: MenuItem[] = [
     icon: LayoutDashboard,
   },
   {
+  label: "Notifications",
+  path: "/main/notifications",
+  icon: Bell,
+},
+  {
     label: "Tâches & Planification",
     path: "/main/tasks",
     icon: ClipboardList,
     subItems: [
       { label: "Toutes les Tâches", path: "/main/tasks", icon: ClipboardList },
-      { label: "Attribuer une Tâche", path: "/main/tasks/assign", icon: UserPlus, roles: ["ORG_OWNER", "FARM_MANAGER"] },
       { label: "Calendrier des Tâches", path: "/main/tasks/calendar", icon: CalendarDays },
+      {label: " Mes Tâches " , path: "/main/tasks/myTasks", icon: ClipboardList }
     ],
   },
   {
@@ -93,6 +94,7 @@ export const menuItems: MenuItem[] = [
       { label: "Cycles & Gestation", path: "/main/reproduction/cycles", icon: Activity },
       { label: "Registre des Naissances", path: "/main/reproduction/births", icon: Sprout },
       { label: "Performance Génétique", path: "/main/reproduction/genetic", icon: TrendingUp },
+      { label: "Arbre Généalogique", path: "/main/reproduction/pedigree", icon: TrendingUp },
     ],
   },
   {
@@ -126,7 +128,8 @@ export const menuItems: MenuItem[] = [
       { label: "Ventes & Produits", path: "/main/finance/sales", icon: DollarSign },
       { label: "Bénéfices / Pertes", path: "/main/finance/reports", icon: TrendingUp },
       { label: "Gestion des Clients", path: "/main/finance/clients", icon: Users },
-    ],
+      { label: "Paiements", path: "/main/finance/payments", icon: DollarSign },    
+],
   },
  {
     label: "Stocks & Matériel",
@@ -147,30 +150,34 @@ export const menuItems: MenuItem[] = [
     subItems: [
       { label: "Mon Abonnement", path: "/main/subscription", icon: TrendingUp },
       { label: "Historique des Paiements", path: "/main/subscription/payments", icon: DollarSign },
+      { label: "Factures", path: "/main/subscription/invoices", icon: FileText },
       { label: "Gestion des Offres", path: "/main/subscription/plans", icon: Package, roles: ["SUPER_ADMIN"] },
     ],
   },
 
-  {
-    label: "Mon Organisation",
-    path: "/main/organization",
-    icon: Building2,
-    roles: ["ORG_OWNER", "FARM_MANAGER"],
-    subItems: [
-      { label: "Détails de l'Organisation", path: "/main/organization", icon: Building2 },
-      { label: "Paramètres ", path: "/main/organisation/settings", icon: Settings },
-
-    ],
-  },
+ {
+  label: "Mon Organisation",
+  path: "/main/organization",
+  icon: Building2,
+  roles: ["ORG_OWNER", "FARM_MANAGER"],
+  subItems: [
+    { label: "Détails de l'Organisation", path: "/main/organization", icon: Building2 },
+    { label: "Membres & Fermes", path: "/main/organization/members", icon: Users },
+    { label: "Invitations", path: "/main/organization/invitations", icon: Mail },
+    { label: "Paramètres", path: "/main/organization/settings", icon: Settings },
+  ],
+},
 
  {
   label: "Administration",
   path: "/main/admin",
   icon: UserCog,
   roles: ["SUPER_ADMIN"],
-  subItems: [
+   subItems: [
     { label: "Gestion Utilisateurs", path: "/main/admin/users", icon: UserCog },
     { label: "Rôles & Permissions", path: "/main/admin/roles", icon: Shield },
+    // { label: "Journal d'Activité", path: "/main/admin/activity", icon: Activity },
+    { label: "Audit", path: "/main/admin/audit", icon: Shield },
   ],
 }
 ];

@@ -1,14 +1,15 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // components/Farm/Herd/HerdList.tsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '../../../hooks/store';
 import { getAllHerds, deleteHerd } from '../../../store/herd/action';
-import { 
-  Users as UsersIcon, 
-  Trash2, 
-  Plus, 
-  Search, 
-  X, 
-  Loader2, 
+import {
+  Users as UsersIcon,
+  Trash2,
+  Plus,
+  Search,
+  X,
+  Loader2,
   Calendar
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,27 +19,45 @@ import { Herd } from '../../../models/herd';
 
 interface HerdListProps {
   farmId: number;
+  initialBarnId?: number;
+  autoOpenCreate?: boolean;
+  onConsumedPrefill?: () => void;
 }
 
-const HerdList: React.FC<HerdListProps> = ({ farmId }) => {
-  const dispatch = useAppDispatch();
+const HerdList: React.FC<HerdListProps> = ({
+  farmId,
+  initialBarnId,
+  autoOpenCreate,
+  onConsumedPrefill,
+}) => {
+    const dispatch = useAppDispatch();
+  const [presetBarnId, setPresetBarnId] = useState<number | undefined>(undefined);
+
   const { entities, isLoading } = useAppSelector((state) => state.herd);
-  
+
+  const herds = Array.isArray(entities) ? entities : [];
+
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedHerd, setSelectedHerd] = useState<Herd | null>(null);
 
-  // Fonction de chargement des données
+    useEffect(() => {
+    if (autoOpenCreate && initialBarnId) {
+      setPresetBarnId(initialBarnId);
+      setSelectedHerd(null);
+      setIsModalOpen(true);
+      onConsumedPrefill?.(); 
+    }
+  }, [autoOpenCreate, initialBarnId, onConsumedPrefill]);
+
   const fetchHerds = useCallback((search: string) => {
     dispatch(getAllHerds({ farmId, search, page: 1, limit: 50 }));
   }, [dispatch, farmId]);
 
-  // Effet pour la recherche en temps réel (Debounce de 500ms)
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       fetchHerds(searchTerm);
     }, 500);
-
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm, fetchHerds]);
 
@@ -61,15 +80,12 @@ const HerdList: React.FC<HerdListProps> = ({ farmId }) => {
   const formatDate = (dateString?: Date) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
+      day: '2-digit', month: 'short', year: 'numeric'
     });
   };
 
   return (
     <div>
-      {/* HEADER & RECHERCHE */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
@@ -91,7 +107,7 @@ const HerdList: React.FC<HerdListProps> = ({ farmId }) => {
               className="pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-vert outline-none w-64 transition-all"
             />
           </div>
-          <button 
+          <button
             onClick={() => setIsModalOpen(true)}
             className="bg-vert text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-green-700 shadow-lg shadow-indigo-100 transition"
           >
@@ -100,15 +116,14 @@ const HerdList: React.FC<HerdListProps> = ({ farmId }) => {
         </div>
       </div>
 
-      {/* GRILLE DE TROUPEAUX */}
-      {isLoading && entities.length === 0 ? (
+      {isLoading && herds.length === 0 ? (
         <div className="flex justify-center py-20">
           <Loader2 className="animate-spin text-vert" size={40} />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <AnimatePresence>
-            {(Array.isArray(entities) ? entities : []).map((herd) => (
+            {herds.map((herd) => (
               <motion.div
                 key={herd.id}
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -116,7 +131,6 @@ const HerdList: React.FC<HerdListProps> = ({ farmId }) => {
                 exit={{ opacity: 0, scale: 0.9 }}
                 className="bg-white rounded-3xl shadow-sm border border-gray-100 hover:border-vert hover:shadow-lg transition-all group overflow-hidden"
               >
-                {/* En-tête avec photo ou icône */}
                 <div className="relative h-32 bg-gradient-to-br from-indigo-50 to-indigo-100 flex items-center justify-center">
                   {herd.photo ? (
                     <img src={herd.photo} alt={herd.name} className="w-full h-full object-cover" />
@@ -125,48 +139,39 @@ const HerdList: React.FC<HerdListProps> = ({ farmId }) => {
                   )}
                 </div>
 
-                {/* Contenu principal */}
                 <div className="p-6 space-y-4">
-                  {/* Nom et ID */}
                   <div>
                     <h3 className="font-bold text-lg text-gray-900 mb-1">{herd.name}</h3>
                     <span className="text-xs font-mono text-gray-400">#HERD-{herd.id}</span>
                   </div>
 
-                  {/* Informations détaillées */}
                   <div className="space-y-2.5 text-sm">
-                    {/* Espèce - Vous devrez peut-être enrichir le modèle pour avoir species.name */}
                     <div className="flex items-center gap-2 text-gray-600">
-                      <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
-                        🐑
-                      </div>
+                      <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">🐑</div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-gray-500">Espèce</p>
                         <p className="font-medium text-gray-900 truncate">
-                          ID #{herd.speciesId}
+                          {herd.speciesId ?? `ID #${herd.speciesId}`}
                         </p>
                       </div>
                     </div>
 
-                    {/* Date de création */}
                     {herd.createdAt && (
                       <div className="flex items-center gap-2 text-gray-600 pt-2 border-t border-gray-100">
                         <Calendar size={14} className="text-gray-400" />
-                        <span className="text-xs">
-                          Créé le {formatDate(herd.createdAt)}
-                        </span>
+                        <span className="text-xs">Créé le {formatDate(herd.createdAt)}</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Actions */}
                   <div className="flex gap-2 pt-4 border-t border-gray-50">
-                    <Button 
+                    <Button
                       onClick={() => handleEdit(herd)}
-                      className="flex-1 bg-green-50  text-vert font-medium text-sm hover:bg-indigo-50 py-2 rounded-lg transition flex items-center justify-center gap-2"
-                    >                      Modifier
+                      className="flex-1 bg-green-50 text-vert font-medium text-sm hover:bg-indigo-50 py-2 rounded-lg transition flex items-center justify-center gap-2"
+                    >
+                      Modifier
                     </Button>
-                    <Button 
+                    <Button
                       onClick={() => handleDelete(herd.id!)}
                       className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
                     >
@@ -180,34 +185,25 @@ const HerdList: React.FC<HerdListProps> = ({ farmId }) => {
         </div>
       )}
 
-      {/* VIDE STATE */}
-      {!isLoading && entities.length === 0 && (
+      {!isLoading && herds.length === 0 && (
         <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-100">
           <div className="bg-indigo-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <UsersIcon className="text-indigo-300" size={30} />
           </div>
           <p className="text-gray-500 font-medium">
-            {searchTerm 
+            {searchTerm
               ? 'Aucun troupeau ne correspond à votre recherche.'
               : 'Aucun troupeau enregistré pour cette ferme.'}
           </p>
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="mt-4 text-vert font-medium hover:underline"
-          >
+          <button onClick={() => setIsModalOpen(true)} className="mt-4 text-vert font-medium hover:underline">
             Créer votre premier troupeau
           </button>
         </div>
       )}
 
-      {/* MODAL DE CRÉATION/MODIFICATION */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <motion.div 
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden"
-          >
+          <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden">
             <div className="p-6 border-b flex justify-between items-center">
               <h3 className="text-xl font-bold">
                 {selectedHerd ? 'Modifier le troupeau' : 'Nouveau troupeau'}
@@ -217,14 +213,16 @@ const HerdList: React.FC<HerdListProps> = ({ farmId }) => {
               </Button>
             </div>
             <div className="p-2">
-              <HerdForm 
-                farmId={farmId}
-                herd={selectedHerd}
-                onSuccess={() => {
-                  handleCloseModal();
-                  fetchHerds('');
-                }} 
-              />
+             
+  <HerdForm
+    farmId={farmId}
+    herd={selectedHerd}
+    initialBarnId={Number(presetBarnId)} 
+    onSuccess={() => {
+      handleCloseModal();
+      fetchHerds('');
+    }}
+  />
             </div>
           </motion.div>
         </div>

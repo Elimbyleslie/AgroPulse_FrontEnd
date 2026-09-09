@@ -1,4 +1,4 @@
-import { createAsyncThunk } from "@reduxjs/toolkit";
+  import { createAsyncThunk } from "@reduxjs/toolkit";
 import { ApiResponse, ThunkApi } from "../../models/store";
 import { CreateAlert,FetchAlert } from "../../models/alerts";
 import { ROUTES } from "../../constants/apiRoutes";

@@ -2,9 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../../../hooks/store";
-import {
-  fetchWithAuthOrganizationById,
-} from "../../../store/organization/action";
+import { fetchWithAuthOrganizationById } from "../../../store/organization/action";
 import {
   selectCurrentOrganization,
   selectCurrentOrganizationStatus,
@@ -12,8 +10,7 @@ import {
 } from "../../../store/organization/slice";
 import { getAllFarms } from "../../../store/farm/action";
 import { selectFarmEntities, selectFarmList } from "../../../store/farm/slice";
-import { selectRoles } from "../../../store/Role&Permission/slice";
-import { fetchRoles } from "../../../store/Role&Permission/action";
+import FarmFormModal from "../../../components/Modal/FarmModal";
 import {
   Building2,
   MapPin,
@@ -24,8 +21,9 @@ import {
   ArrowLeft,
   AlertTriangle,
   RefreshCw,
+  Mail,
+  Phone,
 } from "lucide-react";
-import InviteModal from "../../../components/Modal/InvitationModal";
 
 const Spinner = () => (
   <svg className="animate-spin w-6 h-6 text-vert" viewBox="0 0 24 24">
@@ -35,10 +33,49 @@ const Spinner = () => (
 );
 
 const useOrganizationId = (): number | undefined => {
-  return useAppSelector(
-    (state) => state.authentification.auth.user?.ownedOrganizations?.at(0)?.id,
-  );
+  return useAppSelector((state: any) => {
+    const user = state.authentification.auth.user;
+    return (
+      user?.ownedOrganizations?.at(0)?.id ??
+      user?.defaultOrganizationId ??
+      user?.memberOrganizations?.at(0)?.id
+    );
+  });
 };
+
+const InfoCard: React.FC<{ icon: React.ReactNode; label: string; value: React.ReactNode; tint: string }> = ({
+  icon,
+  label,
+  value,
+  tint,
+}) => (
+  <div className="flex items-center gap-3">
+    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${tint}`}>{icon}</div>
+    <div className="min-w-0">
+      <p className="text-xs font-medium text-gray-400">{label}</p>
+      <p className="text-sm font-bold text-gray-800 truncate">{value}</p>
+    </div>
+  </div>
+);
+
+const QuickLink: React.FC<{ to: string; icon: React.ReactNode; label: string; sub: string }> = ({
+  to,
+  icon,
+  label,
+  sub,
+}) => (
+  <Link
+    to={to}
+    className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:border-emerald-200 hover:shadow-md transition flex items-center gap-3"
+  >
+    <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">{icon}</div>
+    <div className="flex-1 min-w-0">
+      <p className="text-sm font-bold text-gray-800">{label}</p>
+      <p className="text-xs text-gray-400">{sub}</p>
+    </div>
+    <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+  </Link>
+);
 
 const OrganizationDetailPage: React.FC = () => {
   const organizationId = useOrganizationId();
@@ -49,9 +86,8 @@ const OrganizationDetailPage: React.FC = () => {
   const orgError = useAppSelector(selectCurrentOrganizationError);
   const allFarms = useAppSelector(selectFarmEntities);
   const farmListState = useAppSelector(selectFarmList);
-  const roles = useAppSelector(selectRoles);
 
-  const [showInvite, setShowInvite] = useState(false);
+  const [showFarmForm, setShowFarmForm] = useState(false);
 
   const loadOrganization = () => {
     if (organizationId != null) {
@@ -68,23 +104,13 @@ const OrganizationDetailPage: React.FC = () => {
     dispatch(getAllFarms({ page: 1, limit: 100 }));
   }, [dispatch]);
 
-  useEffect(() => {
-    dispatch(fetchRoles());
-  }, [dispatch]);
+  const orgFarms = (allFarms ?? []).filter((f: any) => f.organizationId === organizationId);
 
-  const orgFarms = (allFarms ?? []).filter(
-    (f: any) => f.organizationId === organizationId,
-  );
-
-  // Pas d'organisation rattachée à ce compte — pas une erreur réseau, un état
-  // légitime (ex: compte pas encore propriétaire d'org). Ne boucle pas sur le spinner.
   if (organizationId == null) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-gray-400">
         <Building2 className="w-8 h-8 text-gray-200" />
-        <p className="text-sm font-semibold text-gray-500">
-          Aucune organisation associée à ce compte
-        </p>
+        <p className="text-sm font-semibold text-gray-500">Aucune organisation associée à ce compte</p>
       </div>
     );
   }
@@ -93,12 +119,8 @@ const OrganizationDetailPage: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-3 text-center">
         <AlertTriangle className="w-8 h-8 text-rouge" />
-        <p className="text-sm font-semibold text-gray-600">
-          Impossible de charger l'organisation
-        </p>
-        {orgError?.meta?.message && (
-          <p className="text-xs text-gray-400">{orgError.meta.message}</p>
-        )}
+        <p className="text-sm font-semibold text-gray-600">Impossible de charger l'organisation</p>
+        {orgError?.meta?.message && <p className="text-xs text-gray-400">{orgError.meta.message}</p>}
         <button
           onClick={loadOrganization}
           className="mt-1 flex items-center gap-2 px-4 py-2 bg-bleu text-white text-sm rounded-xl font-semibold hover:bg-darkBleu transition"
@@ -127,61 +149,79 @@ const OrganizationDetailPage: React.FC = () => {
         >
           <ArrowLeft className="w-4 h-4" /> Tableau de bord
         </Link>
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
               <Building2 className="w-7 h-7 text-vert" />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-darkText tracking-tight">
-                {organization.name}
-              </h1>
-              <p className="text-sm text-gray-400 mt-0.5">
-                {organization.email || organization.phone || "Aucun contact renseigné"}
-              </p>
+              <h1 className="text-2xl font-black text-darkText tracking-tight">{organization.name}</h1>
+              <p className="text-sm text-gray-400 mt-0.5">Propriétaire : {organization.ownerName}</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowInvite(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-vert text-white rounded-xl font-semibold text-sm hover:bg-dark_vert transition shadow-sm shadow-emerald-200 flex-shrink-0"
-          >
-            <Link2 className="w-4 h-4" /> Inviter un membre
-          </button>
         </div>
       </div>
 
-      {/* Infos organisation */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div>
-          <p className="text-xs font-medium text-gray-400 mb-0.5">Propriétaire</p>
-          <p className="text-sm font-bold text-gray-800">{organization.ownerName ?? "—"}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-gray-400 mb-0.5">Adresse</p>
-          <p className="text-sm font-bold text-gray-800">{organization.address ?? "—"}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-gray-400 mb-0.5">Fermes</p>
-          <p className="text-sm font-bold text-gray-800">{orgFarms.length}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium text-gray-400 mb-0.5">Membres</p>
-          <p className="text-sm font-bold text-gray-800">
-            {organization.users?.length ?? "—"}
-          </p>
-        </div>
+      {/* Infos organisation — enrichi */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        <InfoCard
+          icon={<Building2 className="w-5 h-5 text-vert" />}
+          label="Propriétaire"
+          value={organization.ownerName ?? "—"}
+          tint="bg-emerald-100"
+        />
+        <InfoCard
+          icon={<MapPin className="w-5 h-5 text-bleu" />}
+          label="Adresse"
+          value={organization.address ?? "Non renseignée"}
+          tint="bg-blue-50"
+        />
+        <InfoCard
+          icon={<Mail className="w-5 h-5 text-amber-600" />}
+          label="Email"
+          value={organization.email ?? "Non renseigné"}
+          tint="bg-amber-50"
+        />
+        <InfoCard
+          icon={<Phone className="w-5 h-5 text-gray-600" />}
+          label="Téléphone"
+          value={organization.phone ?? "Non renseigné"}
+          tint="bg-gray-100"
+        />
+      </div>
+
+      {/* Accès rapides — remplace le bouton "Inviter un membre" par un lien vers la page dédiée */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <QuickLink
+          to="/main/organization/invitations"
+          icon={<Link2 className="w-5 h-5 text-vert" />}
+          label="Invitations"
+          sub="Générer et gérer les liens d'invitation"
+        />
+        <QuickLink
+          to="/main/organization/members"
+          icon={<Users className="w-5 h-5 text-vert" />}
+          label="Membres"
+          sub={`${orgFarms.length > 0 ? "Voir" : "Gérer"} les membres de l'organisation`}
+        />
+        <QuickLink
+          to="/main/organization/settings"
+          icon={<Building2 className="w-5 h-5 text-vert" />}
+          label="Paramètres"
+          sub="Modifier les informations de l'organisation"
+        />
       </div>
 
       {/* Liste des fermes */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-black text-darkText">Fermes</h2>
-          <Link
-            to={`/farms/new?organizationId=${organizationId}`}
+          <h2 className="text-lg font-black text-darkText">Fermes ({orgFarms.length})</h2>
+          <button
+            onClick={() => setShowFarmForm(true)}
             className="flex items-center gap-1.5 text-sm font-semibold text-vert hover:text-dark_vert transition"
           >
             <Plus className="w-4 h-4" /> Ajouter une ferme
-          </Link>
+          </button>
         </div>
 
         {farmListState.status === "pending" ? (
@@ -191,9 +231,13 @@ const OrganizationDetailPage: React.FC = () => {
         ) : orgFarms.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
             <MapPin className="w-8 h-8 text-gray-200" />
-            <p className="font-semibold text-gray-500 text-sm">
-              Aucune ferme pour cette organisation
-            </p>
+            <p className="font-semibold text-gray-500 text-sm">Aucune ferme pour cette organisation</p>
+            <button
+              onClick={() => setShowFarmForm(true)}
+              className="mt-1 flex items-center gap-2 px-4 py-2 bg-vert text-white text-sm rounded-xl font-semibold hover:bg-dark_vert transition"
+            >
+              <Plus className="w-4 h-4" /> Créer la première ferme
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -208,9 +252,7 @@ const OrganizationDetailPage: React.FC = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-gray-800 truncate">{farm.name}</p>
-                  <p className="text-xs text-gray-400 truncate">
-                    {farm.location || "Localisation non renseignée"}
-                  </p>
+                  <p className="text-xs text-gray-400 truncate">{farm.location || "Localisation non renseignée"}</p>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
               </Link>
@@ -219,34 +261,16 @@ const OrganizationDetailPage: React.FC = () => {
         )}
       </div>
 
-      {/* Membres (aperçu simple ; à enrichir plus tard avec rôles/fermes assignées) */}
-      {organization.users && organization.users.length > 0 && (
-        <div>
-          <h2 className="text-lg font-black text-darkText mb-3 flex items-center gap-2">
-            <Users className="w-5 h-5 text-gray-400" /> Membres
-          </h2>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50">
-            {organization.users.map((u: any) => (
-              <div key={u.id} className="px-4 py-3 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-bold text-gray-800">{u.name}</p>
-                  <p className="text-xs text-gray-400">{u.email}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {showInvite && (
-        <InviteModal
-          organizationId={organizationId}
-          organizationName={organization.name}
-          farms={orgFarms.map((f: any) => ({ id: f.id, name: f.name }))}
-          roles={roles}
-          onClose={() => setShowInvite(false)}
-        />
-      )}
+   {showFarmForm && (
+  <FarmFormModal
+    organizationId={organizationId}
+    onClose={() => setShowFarmForm(false)}
+    onSuccess={() => {
+      dispatch(getAllFarms({ page: 1, limit: 100 }));
+      setShowFarmForm(false);
+    }}
+  />
+)}
     </div>
   );
 };

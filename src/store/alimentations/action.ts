@@ -6,19 +6,42 @@ import extractApiError from "../../lib/errorextrator";
 import { Inventory, FeedUsage, AnimalFeeding, FeedingPlan } from "../../models/alimentation";
 import { handleApiResult } from "../../lib/handleApiResult";
 import { ROUTES } from "../../constants/apiRoutes";
-
+ 
+interface InventoryListResponse {
+  items: Inventory[];
+  pagination: {
+    currentPage: number;
+    previousPage: number | null;
+    nextPage: number | null;
+    totalItems: number;
+    totalPages: number;
+  };
+}
+ 
 export const fecthInventory = createAsyncThunk<
-  ApiResponse<Inventory>,
-  number, // ← farmId en paramètre
+  ApiResponse<InventoryListResponse>,
+  { farmId: number; category?: string; page?: number; limit?: number; search?: string },
   { rejectValue: ApiError }
->("Inventory/list", async (farmId, apiThunk) => {
+>("Inventory/list", async (args, apiThunk) => {
   try {
+    const { farmId, category, page, limit, search } = args;
+ 
+    const params = new URLSearchParams();
+    params.append("farmId", String(farmId));
+    if (category) params.append("category", category);
+    if (page) params.append("page", String(page));
+    if (limit) params.append("limit", String(limit));
+    if (search) params.append("search", search);
+ 
     const result = await fetchWithAuth(
-      `${ROUTES.INVENTORY_LIST}?farmId=${farmId}`, 
-      { method: "GET", headers: { "Content-Type": "application/json" } }
+      `${ROUTES.INVENTORY_LIST}?${params.toString()}`,
+      { method: "GET", headers: { "Content-Type": "application/json" } },
     );
-    if (!result) return apiThunk.rejectWithValue({ meta: { message: "Aucune réponse du serveur", status: 500 } });
-    const error = handleApiResult(result, "Stock introuvables");
+ 
+    if (!result) {
+      return apiThunk.rejectWithValue({ meta: { message: "Aucune réponse du serveur", status: 500 } } as any);
+    }
+    const error = handleApiResult(result, "Stock introuvable");
     if (error) return apiThunk.rejectWithValue(extractApiError(error));
     return result!;
   } catch (error) {
