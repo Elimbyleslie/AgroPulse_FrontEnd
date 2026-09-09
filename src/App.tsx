@@ -43,18 +43,30 @@ import ExpensesPage from "./pages/main/gestionFinanciere/ExpensesPages";
 import VentesProduitsDashboard from "./pages/main/gestionFinanciere/VentesProduitsDashboard";
 import ProfitLossPage from "./pages/main/gestionFinanciere/ProfitLossPage";
 import ClientDashboard from "./pages/main/ClientDashboard";
-import InventoryGeneralDashboard from "./pages/main/stock&invintaire/InventoryGeneralDashboard";
-import StockMovementsDashboard from "./pages/main/stock&invintaire/StockMovementsDashboard";
-import PurchasesSuppliersDashboard from "./pages/main/stock&invintaire/PurchasesSupliersDashboard";
-import EquipmentMaintenanceDashboard from "./pages/main/stock&invintaire/EquipmentMaintenanceDashboard";
-import MonAbonnementDashboard from './pages/main/Abonnement&Facturation/MonAbonnement'
-import HistoriquePaiements from './pages/main/Abonnement&Facturation/HistoryPayments'
+import InventoryGeneralDashboard from "./pages/main/stock&inventory/InventoryGeneralDashboard";
+import StockMovementsDashboard from "./pages/main/stock&inventory/StockMovementsDashboard";
+import PurchasesSuppliersDashboard from "./pages/main/stock&inventory/PurchasesSupliersDashboard";
+import EquipmentMaintenanceDashboard from "./pages/main/stock&inventory/EquipmentMaintenanceDashboard";
+import MonAbonnementDashboard from "./pages/main/Abonnement&Facturation/MonAbonnement";
+import HistoriquePaiements from "./pages/main/Abonnement&Facturation/HistoryPayments";
+import HistoriqueFactures from "./pages/main/Abonnement&Facturation/InvoicesHistory";
 import GestionOffres from "./pages/main/Abonnement&Facturation/GestionOffres";
 import OrganizationDetailPage from "./pages/main/dash/organisation";
 import UsersManagementDashboard from "./pages/main/Administration/gestionUtilisateur";
 import RolesPermissionsDashboard from "./pages/main/Administration/Role&Permissions";
 import SettingsDashboard from "./pages/main/Administration/settings";
-
+import TasksListPage from "./pages/main/taches&Planifications/TaskListPage";
+import TasksCalendarPage from "./pages/main/taches&Planifications/TaskCalendar";
+import MyTasksPage from "./pages/main/taches&Planifications/MesTaches";
+import NotificationsDashboard from "./pages/main/Notification";
+import InvitationsPage from "./pages/main/dash/invitationsPage";
+import MembersPage from "./pages/main/dash/MemberPage";
+import AuditPage from "./pages/main/Administration/Audit";
+import PaymentsDashboard from "./pages/main/gestionFinanciere/PaymentDash";
+import ProfilePage from './pages/main/User/Profile';
+import SettingsPage from './pages/main/User/settingsPage';
+// import ActivityLogPage from './pages/main/Administration/JournalActivites';
+import GenealogyTreePage from "./pages/main/reproduction/Pedigree";
 function App() {
   const dispatch = useAppDispatch();
 
@@ -103,17 +115,21 @@ function App() {
             <Route path="/main" element={<MainLayout />}>
               <Route index element={<Navigate to="dashboard" replace />} />
 
+              <Route
+                path="notifications"
+                element={<NotificationsDashboard />}
+              />
               {/* ── Tableau de Bord ── */}
               <Route path="dashboard" element={<MainDashboard />} />
+              <Route path="profile" element={<ProfilePage />} />
+              <Route path="settings" element={<SettingsPage />} />
 
-              {/* ── Tâches & Planification ──
-                  TODO: aucun composant reçu (TaskDashboard / TaskAssign / TaskCalendar).
-                  Routes commentées tant qu'ils n'existent pas — décommenter au fur et
-                  à mesure, dans l'ordre du menu :
-              <Route path="tasks" element={<TaskDashboard />} />
-              <Route path="tasks/assign" element={<TaskAssign />} />
-              <Route path="tasks/calendar" element={<TaskCalendar />} />
-              */}
+
+              {/* ── Tâches & Planification ── */}
+
+              <Route path="tasks" element={<TasksListPage />} />
+              <Route path="tasks/calendar" element={<TasksCalendarPage />} />
+              <Route path="tasks/myTasks" element={<MyTasksPage />} />
 
               {/* ── Gestion du Cheptel ── */}
               <Route path="animals" element={<AnimalList />} />
@@ -140,10 +156,20 @@ function App() {
                 path="reproduction/genetic"
                 element={<GeneticPerformanceList />}
               />
+              <Route
+                path="reproduction/pedigree"
+                element={<GenealogyTreePage />}
+              />
 
               {/* ── Alimentation ── */}
-              <Route path="feeding/rations" element={<FeedingPlanDashboard />} />
-              <Route path="feeding/feedstock" element={<FeedStockDashboard />} />
+              <Route
+                path="feeding/rations"
+                element={<FeedingPlanDashboard />}
+              />
+              <Route
+                path="feeding/feedstock"
+                element={<FeedStockDashboard />}
+              />
 
               {/* ── Production ── */}
               <Route
@@ -160,9 +186,13 @@ function App() {
 
               {/* ── Finance & Ventes ── */}
               <Route path="finance/expenses" element={<ExpensesPage />} />
-              <Route path="finance/sales" element={<VentesProduitsDashboard />} />
+              <Route
+                path="finance/sales"
+                element={<VentesProduitsDashboard />}
+              />
               <Route path="finance/reports" element={<ProfitLossPage />} />
               <Route path="finance/clients" element={<ClientDashboard />} />
+              <Route path="finance/payments" element={<PaymentsDashboard />} />
 
               {/* ── Stocks & Matériel ── */}
               <Route path="inventory" element={<InventoryGeneralDashboard />} />
@@ -185,17 +215,35 @@ function App() {
                 path="subscription/payments"
                 element={<HistoriquePaiements />}
               />
+              <Route
+                path="subscription/invoices"
+                element={<HistoriqueFactures />}
+              />
               <Route path="subscription/plans" element={<GestionOffres />} />
 
               {/* ── Mon Organisation ── */}
               <Route path="organization" element={<OrganizationDetailPage />} />
-           
+              <Route
+                path="organization/settings"
+                element={<SettingsDashboard />}
+              />
+              <Route
+                path="organization/invitations"
+                element={<InvitationsPage />}
+              />
+              <Route path="organization/members" element={<MembersPage />} />
 
               {/* ── Administration ── */}
-              <Route path="admin/users" element={<UsersManagementDashboard />} />
-              <Route path="admin/roles" element={<RolesPermissionsDashboard />} />
-              <Route path="admin/settings" element={<SettingsDashboard />} />
-
+              <Route
+                path="admin/users"
+                element={<UsersManagementDashboard />}
+              />
+              <Route
+                path="admin/roles"
+                element={<RolesPermissionsDashboard />}
+              />
+              {/* <Route path="admin/activity" element={<ActivityLogPage />} /> */}
+              <Route path="admin/audit" element={<AuditPage />} />
               <Route path="*" element={<NotFoundMain />} />
             </Route>
           </Route>

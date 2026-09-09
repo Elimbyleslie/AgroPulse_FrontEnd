@@ -6,11 +6,11 @@ import extractApiError from "../../lib/errorextrator";
 import { handleApiResult } from "../../lib/handleApiResult";
 import { ROUTES } from "../../constants/apiRoutes";
 import { Invitation, InvitationValidation, InvitationCreateInput } from "../../models/invitations";
-
+import { fetchApi} from "../../lib/fecthApi";
 //  Générer un lien d'invitation (owner)
 export const createInvitation = createAsyncThunk<
   ApiResponse<Invitation>,
-  { organizationId: number; data: InvitationCreateInput },
+  { organizationId: number;  data: InvitationCreateInput },
   { rejectValue: ApiError }
 >("invitations/create", async ({ organizationId, data }, apiThunk) => {
   try {
@@ -69,12 +69,17 @@ export const validateInvitation = createAsyncThunk<
   { rejectValue: ApiError }
 >("invitations/validate", async (token, apiThunk) => {
   try {
-    const result = await fetchWithAuth(ROUTES.INVITATION_VALIDATE(token), {
-      method: "GET",
-    });
+    const result = await fetchApi<ApiResponse<InvitationValidation>>(
+      ROUTES.INVITATION_VALIDATE(token),
+      { method: "GET" }
+    );
+
     const error = handleApiResult(result, "Lien d'invitation invalide");
-    if (error) return apiThunk.rejectWithValue(extractApiError(error));
-    return result!;
+    if (error) {
+      return apiThunk.rejectWithValue(extractApiError(error));
+    }
+
+    return result;
   } catch (error) {
     return apiThunk.rejectWithValue(extractApiError(error));
   }

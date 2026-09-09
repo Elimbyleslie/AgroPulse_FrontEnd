@@ -73,8 +73,7 @@ const user = useAppSelector(selectAuthenticatedUser)
     animal: animals.length > 0,
   };
 
-  const allStepsCompleted =
-    completedSteps.organization && completedSteps.farm && completedSteps.animal;
+
 
   const closeModal = () => setModal(null);
 
@@ -127,13 +126,13 @@ const user = useAppSelector(selectAuthenticatedUser)
 
 
 useEffect(() => {
-  if (user.user?.onboardingComplete === true && allStepsCompleted) {
+  if (isLoading) return;
+  if (user.user?.onboardingComplete === true) {
     setIsRedirecting(true);
     navigate("/main/dashboard", { replace: true });
   }
-}, [isLoading, allStepsCompleted, navigate]);
+}, [isLoading, user.user, navigate]);
 
-// Modifie le Loading State pour couvrir aussi la redirection
 if (isLoading || isRedirecting) {
   return (
     <div className="min-h-[calc(100vh-7rem)] flex items-center justify-center">
@@ -191,7 +190,7 @@ if (isLoading || isRedirecting) {
         </motion.div>
 
         {/* Steps Grid */}
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 gap-6 sm:px-8">
           {steps.map((step, index) => {
             const isCompleted = completedSteps[step.id];
             const isDisabled =

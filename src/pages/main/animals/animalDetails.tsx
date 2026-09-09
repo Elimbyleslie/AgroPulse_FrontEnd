@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../../hooks/store';
 import { useEffect, useState } from 'react';
 import { getAnimalById, assignAnimal, unassignAnimal } from '../../../store/animal/action';
-import { fetchAnimalHistory } from '../../../store/AnimalHistory/action'; // Import de l'action historique
+import { fetchAnimalHealthRecords } from '../../../store/AnimalHistory/action'; // Import de l'action historique
 import { getAllLots } from '../../../store/lot/action';
 import { getAllHerds } from '../../../store/herd/action';
 import { getAllPens } from '../../../store/pen/action';
@@ -64,7 +64,7 @@ const AnimalDetail = () => {
   // Charger l'historique quand on bascule sur l'onglet
   useEffect(() => {
     if (id && activeTab === 'history') {
-      dispatch(fetchAnimalHistory(id));
+      dispatch(fetchAnimalHealthRecords({ farmId:Number(id), animalId: Number(id) }));
     }
   }, [id, activeTab, dispatch]);
 

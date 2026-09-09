@@ -7,12 +7,13 @@ import { createInvitation } from "../../store/administration/inviteAction";
 import { selectInvitationCreateState } from "../../store/administration/inviteSlice";
 import { Role } from "../../models/UserRolePermission";
 import SelectInput from "../UI/SelectInput";
+import { PATH_AUTH } from "../../constants/paths";
 
 interface InviteModalProps {
   organizationId: number;
   organizationName: string;
-  farms: { id: number; name: string }[]; 
-  roles?: Role[]; 
+  farms: { id: number; name: string }[];
+  roles?: Role[];
   onClose: () => void;
 }
 
@@ -46,7 +47,7 @@ const InviteModal: React.FC<InviteModalProps> = ({
       ).unwrap();
 
       const invitation = result.data as any;
-      const link = `${window.location.origin}/register?token=${invitation.token}`;
+      const link = `${window.location.origin}${PATH_AUTH.REGISTER}?token=${invitation.token}`;
       setGeneratedLink(link);
     } catch {
       toast.error("Erreur lors de la génération du lien");

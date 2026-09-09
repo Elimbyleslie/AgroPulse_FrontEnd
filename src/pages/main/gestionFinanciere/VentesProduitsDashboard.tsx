@@ -5,7 +5,7 @@ import {
   Search, RefreshCw, ChevronRight, Filter, Download,
   ShoppingCart, Plus, Pencil, Trash2, X, ChevronDown, ChevronUp,
   CreditCard, Smartphone, Wallet, Banknote, Package2, CheckCircle2,
-  Clock, XCircle, User as UserIcon, Sparkles,
+  Clock, XCircle, User as UserIcon, Sparkles, FileEdit,
 } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -55,13 +55,17 @@ const statusConfig: Record<string, { label: string; cls: string; icon: React.Rea
   [SaleStatus.CANCELLED]: { label: "Annulée",     cls: "bg-red-50 text-rouge border border-red-200",         icon: <XCircle className="w-3.5 h-3.5" /> },
 };
 
+// ⚠️ Corrigé : PaymentMethod.paypal et PaymentMethod.others n'existent plus
+// (bank_transfer / check / other désormais). bank_transfer et check étaient
+// aussi totalement absents de cette table, même après renommage.
 const paymentConfig: Record<string, { label: string; icon: React.ReactNode }> = {
-  [PaymentMethod.card]:         { label: "Carte",         icon: <CreditCard className="w-3.5 h-3.5" /> },
-  [PaymentMethod.mobile_money]: { label: "Mobile Money",  icon: <Smartphone className="w-3.5 h-3.5" /> },
-  [PaymentMethod.orange_money]: { label: "Orange Money",  icon: <Smartphone className="w-3.5 h-3.5" /> },
-  [PaymentMethod.paypal]:       { label: "PayPal",        icon: <Wallet className="w-3.5 h-3.5" /> },
-  [PaymentMethod.cash]:         { label: "Espèces",       icon: <Banknote className="w-3.5 h-3.5" /> },
-  [PaymentMethod.others]:       { label: "Autre",         icon: <Wallet className="w-3.5 h-3.5" /> },
+  [PaymentMethod.card]:          { label: "Carte",             icon: <CreditCard className="w-3.5 h-3.5" /> },
+  [PaymentMethod.mobile_money]:  { label: "Mobile Money",      icon: <Smartphone className="w-3.5 h-3.5" /> },
+  [PaymentMethod.orange_money]:  { label: "Orange Money",      icon: <Smartphone className="w-3.5 h-3.5" /> },
+  [PaymentMethod.bank_transfer]: { label: "Virement bancaire", icon: <Wallet className="w-3.5 h-3.5" /> },
+  [PaymentMethod.check]:         { label: "Chèque",            icon: <FileEdit className="w-3.5 h-3.5" /> },
+  [PaymentMethod.cash]:          { label: "Espèces",           icon: <Banknote className="w-3.5 h-3.5" /> },
+  [PaymentMethod.other]:         { label: "Autre",             icon: <Wallet className="w-3.5 h-3.5" /> },
 };
 
 // ── Stat Card ─────────────────────────────────────────────────────────────
@@ -647,6 +651,9 @@ const VentesProduitsDashboard: React.FC = () => {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  // ⚠️ x.total est `number | null | undefined` dans le modèle — le `|| 0`
+  // protège déjà contre le NaN ici (c'est ProfitLossDashboard qui ne le
+  // faisait pas, voir correction séparée).
   const totalRevenue = sales.reduce((s, x) => s + (x.total || 0), 0);
   const completedCount = sales.filter((s) => s.status === SaleStatus.COMPLETED).length;
   const activeFilters = [filterStatus !== "all", filterPayment !== "all", !!dateFrom, !!dateTo, !!searchTerm].filter(Boolean).length;

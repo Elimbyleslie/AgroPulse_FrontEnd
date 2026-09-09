@@ -6,8 +6,9 @@ import * as Yup from 'yup';
 import { useAppDispatch, useAppSelector } from '../../../hooks/store';
 import { createHerd, updateHerd } from '../../../store/herd/action';
 import { getSpeciesList } from '../../../store/espece&Race/species';
+import { getAllBarns } from '../../../store/barn/action'; // ✅ à adapter selon ton path réel
 import { toast } from 'react-toastify';
-import { Camera,  } from 'lucide-react';
+import { Camera } from 'lucide-react';
 import Input from '../../UI/Input';
 import Button from '../../UI/Button';
 import SelectInput from '../../UI/SelectInput';
@@ -16,6 +17,7 @@ import { Herd } from '../../../models/herd';
 interface HerdFormProps {
   farmId: number;
   herd?: Herd | null;
+  initialBarnId: number ;
   onSuccess: () => void;
 }
 
@@ -24,23 +26,31 @@ const validationSchema = Yup.object({
     .required('Le nom du troupeau est obligatoire')
     .min(2, 'Le nom doit contenir au moins 2 caractères'),
   speciesId: Yup.number()
-    .required('L\'espèce est obligatoire')
+    .required("L'espèce est obligatoire")
     .positive('Veuillez sélectionner une espèce valide'),
+  barnId: Yup.number()
+    .required('Le bâtiment est obligatoire')
+    .positive('Veuillez sélectionner un bâtiment valide'),
 });
 
-const HerdForm: React.FC<HerdFormProps> = ({ farmId, herd, onSuccess }) => {
+const HerdForm: React.FC<HerdFormProps> = ({ farmId, herd,initialBarnId, onSuccess }) => {
   const dispatch = useAppDispatch();
   const { data: species, loading: loadingSpecies } = useAppSelector(
     (state) => state.species
   );
+  const { entities: barnEntities, isLoading: loadingBarns } = useAppSelector(
+    (state: any) => state.barn
+  );
+
+  const barns = Array.isArray(barnEntities) ? barnEntities : [];
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(herd?.photo || null);
 
   useEffect(() => {
-    // Charger les espèces
     dispatch(getSpeciesList());
-  }, [dispatch]);
+    dispatch(getAllBarns({ farmId }));
+  }, [dispatch, farmId]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -52,10 +62,14 @@ const HerdForm: React.FC<HerdFormProps> = ({ farmId, herd, onSuccess }) => {
     }
   };
 
-  // Options pour le select des espèces
-  const speciesOptions = species.map((sp:any) => ({
+  const speciesOptions = species.map((sp: any) => ({
     value: sp.id.toString(),
     label: sp.name,
+  }));
+
+  const barnOptions = barns.map((b: any) => ({
+    value: b.id.toString(),
+    label: b.name,
   }));
 
   return (
@@ -65,11 +79,13 @@ const HerdForm: React.FC<HerdFormProps> = ({ farmId, herd, onSuccess }) => {
         farmId: farmId,
         name: herd?.name || '',
         speciesId: herd?.speciesId?.toString() || '',
+        barnId: herd?.barnId?.toString() || '',
+        initialBarnId: herd?.barnId?.toString() || initialBarnId?.toString() || ''
       }}
       validationSchema={validationSchema}
       onSubmit={async (values, { setSubmitting }) => {
         const formData = new FormData();
-        
+
         Object.entries(values).forEach(([key, value]) => {
           if (value !== null && value !== undefined && value !== '') {
             formData.append(key, String(value));
@@ -90,9 +106,9 @@ const HerdForm: React.FC<HerdFormProps> = ({ farmId, herd, onSuccess }) => {
           }
           onSuccess();
         } catch (error: any) {
-          const errorMsg = error?.errors 
-            ? Object.values(error.errors).join(' | ') 
-            : error?.message || 'Erreur lors de l\'opération';
+          const errorMsg = error?.errors
+            ? Object.values(error.errors).join(' | ')
+            : error?.message || "Erreur lors de l'opération";
           toast.error(errorMsg);
         } finally {
           setSubmitting(false);
@@ -112,12 +128,12 @@ const HerdForm: React.FC<HerdFormProps> = ({ farmId, herd, onSuccess }) => {
                   <span className="text-xs text-gray-400">Photo du troupeau</span>
                 </div>
               )}
-              <input 
-                type="file" 
+              <input
+                type="file"
                 id="herd-photo-upload"
-                accept="image/*" 
-                onChange={handleImageChange} 
-                className="absolute inset-0 cursor-pointer opacity-0" 
+                accept="image/*"
+                onChange={handleImageChange}
+                className="absolute inset-0 cursor-pointer opacity-0"
               />
             </div>
             <p className="text-xs text-gray-400 mt-2">Cliquez pour ajouter une photo</p>
@@ -125,10 +141,10 @@ const HerdForm: React.FC<HerdFormProps> = ({ farmId, herd, onSuccess }) => {
 
           {/* Nom du troupeau */}
           <div>
-            <Input 
-              label="Nom du troupeau *" 
-              name="name" 
-              placeholder="Ex: Troupeau Nord, Groupe A..." 
+            <Input
+              label="Nom du troupeau *"
+              name="name"
+              placeholder="Ex: Troupeau Nord, Groupe A..."
             />
             <ErrorMessage name="name" component="div" className="text-xs text-red-500 mt-1" />
           </div>
@@ -148,10 +164,25 @@ const HerdForm: React.FC<HerdFormProps> = ({ farmId, herd, onSuccess }) => {
             )}
           </div>
 
+          {/* ✅ Sélection du bâtiment */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">Bâtiment *</label>
+            <SelectInput
+              value={values.barnId}
+              onChange={(val) => setFieldValue('barnId', val)}
+              options={barnOptions}
+              loading={loadingBarns}
+              placeholder="Sélectionner un bâtiment"
+            />
+            {touched.barnId && errors.barnId && (
+              <span className="text-xs text-red-500">{errors.barnId as string}</span>
+            )}
+          </div>
+
           {/* Bouton de soumission */}
-          <Button 
-            type="submit" 
-            disabled={isSubmitting} 
+          <Button
+            type="submit"
+            disabled={isSubmitting}
             className=" bg-vert text-white w-full  py-3 rounded-xl mt-6 hover:bg-green-700 transition disabled:opacity-50"
           >
             {isSubmitting ? 'Enregistrement...' : herd ? 'Modifier le troupeau' : 'Créer le troupeau'}

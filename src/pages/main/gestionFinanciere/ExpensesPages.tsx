@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useAppDispatch, useAppSelector } from "../../../hooks/store";
 import {
@@ -108,13 +109,17 @@ const CATEGORY_COLORS: Record<string, string> = {
   MAINTENANCE: "bg-yellow-50 text-yellow-700 border-yellow-200",
 };
 
+// ⚠️ Corrigé : PaymentMethod.paypal et PaymentMethod.others n'existent plus
+// dans le modèle (bank_transfer / check / other désormais) — Record<PaymentMethod, string>
+// ne compilait plus avec les anciennes clés.
 const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   [PaymentMethod.card]: "Carte",
   [PaymentMethod.mobile_money]: "Mobile Money",
   [PaymentMethod.orange_money]: "Orange Money",
-  [PaymentMethod.paypal]: "PayPal",
+  [PaymentMethod.bank_transfer]: "Virement bancaire",
+  [PaymentMethod.check]: "Chèque",
   [PaymentMethod.cash]: "Espèces",
-  [PaymentMethod.others]: "Autre",
+  [PaymentMethod.other]: "Autre",
 };
 
 // ── Stat Card ─────────────────────────────────────────────────────────────────
@@ -310,8 +315,6 @@ const ExpenseFormModal: React.FC<{
         notes: form.notes || undefined,
         isRecurring: form.isRecurring,
       };
-
-      console.log("🚀 Submitting expense payload:", payload);
 
       if (initial) {
         await dispatch(

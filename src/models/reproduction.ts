@@ -267,48 +267,6 @@ export interface UpdateGeneticPerformancePayload extends Partial<CreateGeneticPe
   id: number;
 }
 
-// ==================== PEDIGREE ====================
-
-export interface FetchPedigree {
-  id: number;
-  animalId: number;
-  motherId?: number | null;
-  fatherId?: number | null;
-  maternalGrandmotherId?: number | null;
-  maternalGrandfatherId?: number | null;
-  paternalGrandmotherId?: number | null;
-  paternalGrandfatherId?: number | null;
-  generation4Ids?: unknown;
-  completeness?: number | null;
-  verified: boolean;
-  animal?: AnimalLight;
-  mother?: AnimalLight | null;
-  father?: AnimalLight | null;
-  maternalGrandmother?: AnimalLight | null;
-  maternalGrandfather?: AnimalLight | null;
-  paternalGrandmother?: AnimalLight | null;
-  paternalGrandfather?: AnimalLight | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreatePedigreePayload {
-  animalId: number;
-  motherId?: number;
-  fatherId?: number;
-  maternalGrandmotherId?: number;
-  maternalGrandfatherId?: number;
-  paternalGrandmotherId?: number;
-  paternalGrandfatherId?: number;
-  generation4Ids?: unknown;
-  completeness?: number;
-  verified?: boolean;
-}
-
-export interface UpdatePedigreePayload extends Partial<CreatePedigreePayload> {
-  id: number;
-}
-
 // ==================== PAGINATION ====================
 
 export interface Pagination {

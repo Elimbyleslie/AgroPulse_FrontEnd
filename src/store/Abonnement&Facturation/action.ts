@@ -2,7 +2,7 @@ import {
   Plan,
   Subscription,
   SubscriptionWithPlan,
-  RenewalType,
+  BillingInterval,
 } from "../../models/abonnementFacturation";
 import { ApiError, ApiResponse, Pagination } from "../../models/store";
 import { createAsyncThunk } from "@reduxjs/toolkit";
@@ -11,22 +11,56 @@ import { ROUTES, SUBSCRIPTION_ROUTES } from "../../constants/apiRoutes";
 import { handleApiResult } from "../../lib/handleApiResult";
 import extractApiError from "../../lib/errorextrator";
 
+// ── Payloads ─────────────────────────────────────────────────────────────
+
+export type CreateSubscriptionPayload = {
+  organizationId: number;
+  planId: number;
+  billingInterval?: BillingInterval | "MONTHLY" | "YEARLY";
+  trialDays?: number;
+  method?: string;
+  provider?: string;
+  providerRef?: string;
+  notes?: string;
+};
+
+export type UpdateSubscriptionPayload = {
+  planId?: number;
+  billingInterval?: BillingInterval | "MONTHLY" | "YEARLY";
+  notes?: string | null;
+};
+
+export type CancelSubscriptionPayload = {
+  id: number;
+  immediate?: boolean;
+};
 
 // ── Abonnements ──────────────────────────────────────────────────────────
 
 export const fetchSubscriptions = createAsyncThunk<
-  ApiResponse<SubscriptionWithPlan[]>,
-  { organizationId: number; page?: number; limit?: number; status?: string; search?: string },
+  ApiResponse<{
+    subscriptions: SubscriptionWithPlan[];
+    pagination: Pagination;
+  }>,
+  {
+    organizationId: number;
+    page?: number;
+    limit?: number;
+    status?: string;
+    search?: string;
+  },
   { rejectValue: ApiError }
 >("subscription/list", async (params, thunkAPI) => {
   try {
     const query = new URLSearchParams();
-    if (params.page) query.append("page", params.page.toString());
-    if (params.limit) query.append("limit", params.limit.toString());
+    if (params.page) query.append("page", String(params.page));
+    if (params.limit) query.append("limit", String(params.limit));
     if (params.status) query.append("status", params.status);
     if (params.search) query.append("search", params.search);
 
-    const url = SUBSCRIPTION_ROUTES.LIST_BY_ORGANIZATION(params.organizationId);;
+    const qs = query.toString();
+    const base = SUBSCRIPTION_ROUTES.LIST_BY_ORGANIZATION(params.organizationId);
+    const url = qs ? `${base}?${qs}` : base;
 
     const result = await fetchWithAuth(url, { method: "GET" });
 
@@ -39,17 +73,16 @@ export const fetchSubscriptions = createAsyncThunk<
   }
 });
 
-// Récupérer un abonnement par ID
+
 export const getSubscriptionById = createAsyncThunk<
   ApiResponse<SubscriptionWithPlan>,
   number,
   { rejectValue: ApiError }
 >("subscription/byId", async (id, thunkAPI) => {
   try {
-    const result = await fetchWithAuth(
-      SUBSCRIPTION_ROUTES.GET_BY_ID(id),
-      { method: "GET" }
-    );
+    const result = await fetchWithAuth(SUBSCRIPTION_ROUTES.GET_BY_ID(id), {
+      method: "GET",
+    });
 
     const error = handleApiResult(result, "Abonnement introuvable");
     if (error) return thunkAPI.rejectWithValue(extractApiError(error));
@@ -60,19 +93,29 @@ export const getSubscriptionById = createAsyncThunk<
   }
 });
 
-// Créer un abonnement
 export const createSubscription = createAsyncThunk<
-  ApiResponse<SubscriptionWithPlan>,
-  { organizationId: number; planId: number; renewalType: RenewalType },
+  ApiResponse<
+    | SubscriptionWithPlan
+    | {
+        subscription: SubscriptionWithPlan;
+        invoice?: unknown;
+        payment?: unknown;
+      }
+  >,
+  CreateSubscriptionPayload,
   { rejectValue: ApiError }
 >("subscription/create", async (data, thunkAPI) => {
   try {
     const result = await fetchWithAuth(SUBSCRIPTION_ROUTES.CREATE, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
-    const error = handleApiResult(result, "Erreur lors de la création de l'abonnement");
+    const error = handleApiResult(
+      result,
+      "Erreur lors de la création de l'abonnement",
+    );
     if (error) return thunkAPI.rejectWithValue(extractApiError(error));
 
     return result!;
@@ -81,15 +124,15 @@ export const createSubscription = createAsyncThunk<
   }
 });
 
-// Mettre à jour un abonnement
 export const updateSubscription = createAsyncThunk<
   ApiResponse<SubscriptionWithPlan>,
-  { id: number; data: { planId?: number; renewalType?: RenewalType } },
+  { id: number; data: UpdateSubscriptionPayload },
   { rejectValue: ApiError }
 >("subscription/update", async ({ id, data }, thunkAPI) => {
   try {
     const result = await fetchWithAuth(SUBSCRIPTION_ROUTES.UPDATE(id), {
       method: "PUT",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
@@ -102,15 +145,16 @@ export const updateSubscription = createAsyncThunk<
   }
 });
 
-// Annuler un abonnement
 export const cancelSubscription = createAsyncThunk<
   ApiResponse<Subscription>,
-  { id: number },
+  CancelSubscriptionPayload,
   { rejectValue: ApiError }
->("subscription/cancel", async ({ id }, thunkAPI) => {
+>("subscription/cancel", async ({ id, immediate = false }, thunkAPI) => {
   try {
     const result = await fetchWithAuth(SUBSCRIPTION_ROUTES.CANCEL(id), {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ immediate }),
     });
 
     const error = handleApiResult(result, "Erreur lors de l'annulation");
@@ -122,9 +166,38 @@ export const cancelSubscription = createAsyncThunk<
   }
 });
 
-// Supprimer un abonnement
+// export const renewSubscription = createAsyncThunk<
+//   ApiResponse<{
+//     subscription: SubscriptionWithPlan;
+//     invoice?: unknown;
+//     payment?: unknown;
+//   }>,
+//   {
+//     id: number;
+//     method?: string;
+//     provider?: string;
+//     providerRef?: string;
+//   },
+//   { rejectValue: ApiError }
+// >("subscription/renew", async ({ id, ...body }, thunkAPI) => {
+//   try {
+//     const result = await fetchWithAuth(SUBSCRIPTION_ROUTES.RENEW(id), {
+//       method: "POST",
+//       headers: { "Content-Type": "application/json" },
+//       body: JSON.stringify(body),
+//     });
+
+//     const error = handleApiResult(result, "Erreur lors du renouvellement");
+//     if (error) return thunkAPI.rejectWithValue(extractApiError(error));
+
+//     return result!;
+//   } catch (error) {
+//     return thunkAPI.rejectWithValue(extractApiError(error));
+//   }
+// });
+
 export const deleteSubscription = createAsyncThunk<
-  ApiResponse<Subscription>,
+  ApiResponse<{ id: number } | Subscription>,
   { id: number },
   { rejectValue: ApiError }
 >("subscription/delete", async ({ id }, thunkAPI) => {
@@ -146,24 +219,39 @@ export const deleteSubscription = createAsyncThunk<
 
 export const fetchPlans = createAsyncThunk<
   ApiResponse<{ plans: Plan[]; pagination: Pagination }>,
-  { page?: number; limit?: number },
+  {
+    page?: number;
+    limit?: number;
+    isActive?: boolean;
+    isPublic?: boolean;
+    search?: string;
+  },
   { rejectValue: ApiError }
 >("plan/list", async (params, apiThunk) => {
   try {
     const query = new URLSearchParams();
-    if (params.page) query.append("page", params.page.toString());
-    if (params.limit) query.append("limit", params.limit.toString());
+    if (params.page) query.append("page", String(params.page));
+    if (params.limit) query.append("limit", String(params.limit));
+    if (params.isActive !== undefined)
+      query.append("isActive", String(params.isActive));
+    if (params.isPublic !== undefined)
+      query.append("isPublic", String(params.isPublic));
+    if (params.search) query.append("search", params.search);
 
-    const result = await fetchWithAuth(
-      `${ROUTES.LIST_PLANS}?${query.toString()}`,
-      { method: "GET" },
-    );
-    if (!result)
+    const qs = query.toString();
+    const url = qs ? `${ROUTES.LIST_PLANS}?${qs}` : ROUTES.LIST_PLANS;
+
+    const result = await fetchWithAuth(url, { method: "GET" });
+
+    if (!result) {
       return apiThunk.rejectWithValue({
         meta: { message: "Aucune réponse du serveur", status: 500 },
       });
+    }
+
     const error = handleApiResult(result, "Plans introuvables");
     if (error) return apiThunk.rejectWithValue(extractApiError(error));
+
     return result!;
   } catch (error) {
     return apiThunk.rejectWithValue(extractApiError(error));
@@ -176,19 +264,19 @@ export const getPlanById = createAsyncThunk<
   { rejectValue: ApiError }
 >("plan/byId", async (id, apiThunk) => {
   try {
-    const result = await fetchWithAuth(`${ROUTES.GET_PLAN_BY_ID}/${id}`, {
+    const result = await fetchWithAuth(ROUTES.PLAN_GET_BY_ID(id), {
       method: "GET",
     });
+
     const error = handleApiResult(result, "Plan introuvable");
     if (error) return apiThunk.rejectWithValue(extractApiError(error));
+
     return result!;
   } catch (error) {
     return apiThunk.rejectWithValue(extractApiError(error));
   }
 });
 
-// CRUD plans (admin) — inclus pour complétude, non utilisé par le dashboard
-// "Mon abonnement" qui ne fait que lister/choisir un plan.
 export const createPlan = createAsyncThunk<
   ApiResponse<Plan>,
   Partial<Plan>,
@@ -197,10 +285,13 @@ export const createPlan = createAsyncThunk<
   try {
     const result = await fetchWithAuth(ROUTES.CREATE_PLAN, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
+
     const error = handleApiResult(result, "Erreur lors de la création");
     if (error) return apiThunk.rejectWithValue(extractApiError(error));
+
     return result!;
   } catch (error) {
     return apiThunk.rejectWithValue(extractApiError(error));
@@ -215,10 +306,13 @@ export const updatePlan = createAsyncThunk<
   try {
     const result = await fetchWithAuth(ROUTES.UPDATE_PLAN(id), {
       method: "PUT",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
+
     const error = handleApiResult(result, "Erreur lors de la mise à jour");
     if (error) return apiThunk.rejectWithValue(extractApiError(error));
+
     return result!;
   } catch (error) {
     return apiThunk.rejectWithValue(extractApiError(error));
@@ -226,7 +320,7 @@ export const updatePlan = createAsyncThunk<
 });
 
 export const deletePlan = createAsyncThunk<
-  ApiResponse<Plan>,
+  ApiResponse<null>,
   { id: number },
   { rejectValue: ApiError }
 >("plan/delete", async ({ id }, apiThunk) => {
@@ -234,8 +328,10 @@ export const deletePlan = createAsyncThunk<
     const result = await fetchWithAuth(ROUTES.DELETE_PLAN(id), {
       method: "DELETE",
     });
+
     const error = handleApiResult(result, "Erreur lors de la suppression");
     if (error) return apiThunk.rejectWithValue(extractApiError(error));
+
     return result!;
   } catch (error) {
     return apiThunk.rejectWithValue(extractApiError(error));

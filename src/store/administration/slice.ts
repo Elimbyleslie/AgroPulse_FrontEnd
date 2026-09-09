@@ -183,14 +183,15 @@ const adminSlice = createSlice({
         state.notificationsState.loading = true;
         state.notificationsState.error = null;
       })
+      //recuperer toutes les notifications sans bug 
       .addCase(fetchNotifications.fulfilled, (state, action) => {
         state.notificationsState.loading = false;
         const payload = action.payload.data as any;
-        const items: Notification[] = payload?.items ?? payload ?? [];
-        state.notifications = items;
+        state.notifications = payload?.notifications ?? [];
+         state.unreadCount = payload?.unreadCount ?? 0;
         state.notificationsPagination = payload?.pagination ?? null;
-        state.unreadCount = items.filter((n) => !n.read).length;
       })
+     
       .addCase(fetchNotifications.rejected, (state, action) => {
         state.notificationsState.loading = false;
         state.notificationsState.error = action.payload ?? null;

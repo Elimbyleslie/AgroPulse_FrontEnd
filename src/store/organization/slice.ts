@@ -132,4 +132,5 @@ export const selectCreateOrganizationStatus = (state: RootState) => state.organi
 export const selectCurrentOrganization = (state: RootState) => state.organizations.currentOrganization.entity;
 export const selectCurrentOrganizationStatus = (state: RootState) => state.organizations.currentOrganization.status;
 export const selectCurrentOrganizationError = (state: RootState) => state.organizations.currentOrganization.error;
+
 export default OrganizationSlice;

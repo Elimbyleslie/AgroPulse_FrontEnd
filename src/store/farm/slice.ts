@@ -251,7 +251,7 @@ const toFarmArray = (value: unknown): Farm[] => {
   export const selectFarms = (state: RootState) => state.farms;
   export const selectFarmList = (state: RootState) => state.farms.farmList;
   export const selectFarmEntities = (state: RootState): Farm[] =>
-    toFarmArray(state.farms.farmList.entities); // ← sélecteur normalisé direct
+    toFarmArray(state.farms.farmList.entities);
   export const selectCurrentFarm = (state: RootState) => state.farms.currentFarm;
   export const selectPagination = (state: RootState) => state.farms.pagination;
   export const selectFarm = (state: RootState) => state.farms.farm;

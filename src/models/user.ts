@@ -10,8 +10,8 @@ export interface User extends BaseEntity {
   phone?: string;
   photo?: string;
   emailVerified: boolean;
-  defaulFarmId?: number;
-  defaulOrganizationId?: number;
+  defaultFarmId?: number;
+  defaultOrganizationId?: number;
   onboardingComplete?: boolean;
   lastConnexion: string | Date;
   status: "active" | "inactive";
@@ -51,8 +51,8 @@ export interface UserRegisterForm {
   passwordConfirmation: string;
   phone?: string;
   photo?: string;
-  defaulFarmId?: number;
-  defaulOrganizationId?: number;
+  defaultFarmId?: number;
+  defaultOrganizationId?: number;
   invitationToken?: string;
 }
 

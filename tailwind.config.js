@@ -21,7 +21,7 @@ export default {
         white: "#FFFFFF",
         darkText: "#2B2B2B",
         darkVert: "#0D8821",
-        darkJaune: "#D9B139",
+        darkJaune: "#DEB53B",
         darkBleu: "#607FE2",
         darkRouge: "#EC1313",
         darkBleuVert: "#0D8849",

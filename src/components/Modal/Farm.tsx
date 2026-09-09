@@ -1,6 +1,5 @@
 import { Home, MapPin, Ruler } from "lucide-react";
 import { motion } from "framer-motion";
-import { useEffect } from "react";
 import { Formik, Form, FormikHelpers } from "formik";
 import * as Yup from "yup";
 import { useAppDispatch, useAppSelector } from "../../hooks/store";
@@ -10,8 +9,8 @@ import { RootState } from "../../store";
 import Input from "../UI/Input";
 import Button from "../UI/Button";
 import { toast } from "react-toastify";
+import { AgroPulseStorage } from "../../guards/storage";
 
-import { AgroPulseStorage } from "../../guards/storage"
 interface FarmFormProps {
   organizationId?: number;
   onSuccess: () => void;
@@ -34,25 +33,17 @@ const AREA_UNITS = [
 
 export default function FarmForm({ organizationId, onSuccess }: FarmFormProps) {
   const dispatch = useAppDispatch();
-const authUser = useAppSelector((state: RootState) => state.authentification.auth.user);
+  const authUser = useAppSelector((state: RootState) => state.authentification.auth.user);
   const organizations = useAppSelector(
     (state: RootState) => state.organizations.organizationList.entities ?? []
   );
 
-
   const finalOrgId = organizationId || organizations[0]?.id;
-  const organization = organizations.find(org => org.id === finalOrgId);
-const managerId = authUser?.id || authUser?.id || AgroPulseStorage.getUser()?.user?.id || AgroPulseStorage.getUser()?.id;
+  const organization = organizations.find((org) => org.id === finalOrgId);
 
- useEffect(() => {
-  console.log("========== TEST PERSISTANCE ==========");
-  console.log("1. Manager ID (Redux):",managerId);
-  console.log("2. Token (Storage):", AgroPulseStorage.getAccessToken());
-  console.log("3. User (Storage):", AgroPulseStorage.getUser());
-  console.log("4. ID from Storage:", AgroPulseStorage.getUser()?.user?.id_user);
-  console.log("5. Refresh Token:", AgroPulseStorage.getRefreshToken());
-  console.log("======================================");
-}, []);
+  // Fallback en cascade : Redux d'abord, puis storage local si le state n'est pas encore hydraté
+  const managerId =
+    authUser?.id ?? AgroPulseStorage.getUser()?.user?.id ?? AgroPulseStorage.getUser()?.id;
 
   // ✅ Schéma de validation Yup
   const validationSchema = Yup.object({
@@ -69,7 +60,7 @@ const managerId = authUser?.id || authUser?.id || AgroPulseStorage.getUser()?.us
       .positive("La superficie doit être positive")
       .typeError("La superficie doit être un nombre"),
     areaUnit: Yup.string().oneOf(
-      AREA_UNITS.map(u => u.value),
+      AREA_UNITS.map((u) => u.value),
       "Unité invalide"
     ),
     photo: Yup.string()
@@ -90,47 +81,38 @@ const managerId = authUser?.id || authUser?.id || AgroPulseStorage.getUser()?.us
     values: FormValues,
     { setSubmitting }: FormikHelpers<FormValues>
   ) => {
-    // ✅ Vérifier que l'organisation existe
     if (!finalOrgId) {
       toast.error("Aucune organisation trouvée. Veuillez d'abord créer une organisation.");
       setSubmitting(false);
       return;
     }
 
-
     if (!managerId) {
       toast.error("Utilisateur non authentifié. Veuillez vous reconnecter.");
       setSubmitting(false);
       return;
     }
-    
 
     try {
-      // ✅ Construire les données de la ferme
       const farmData: FarmFormData = {
         organizationId: finalOrgId,
-        managerId: managerId, // ✅ Ajouter l'ID du manager
+        managerId: managerId,
         name: values.name.trim(),
         location: values.location.trim(),
         area: values.area,
-        areaUnit:values.areaUnit
+        areaUnit: values.areaUnit,
       };
-
 
       if (values.photo && values.photo.trim() !== "") {
         farmData.photo = values.photo.trim();
       }
 
-      console.log("✅ Données envoyées:", farmData);
-
       await dispatch(createFarm(farmData)).unwrap();
 
       toast.success("Ferme créée avec succès !");
       onSuccess();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
-      console.error("❌ Erreur lors de la création:", error);
-
       let errorMessage = "Une erreur est survenue lors de la création de la ferme";
 
       if (error?.message) {
@@ -152,18 +134,13 @@ const managerId = authUser?.id || authUser?.id || AgroPulseStorage.getUser()?.us
           <Home className="text-yellow-600" size={24} />
         </div>
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">
-            Ajouter votre ferme
-          </h2>
+          <h2 className="text-xl font-semibold text-gray-900">Ajouter votre ferme</h2>
           <p className="text-sm text-gray-500">
-            {organization?.name
-              ? `Organisation: ${organization.name}`
-              : "Deuxième étape pour compléter votre profil"}
+            {organization?.name ? `Organisation: ${organization.name}` : "Deuxième étape pour compléter votre profil"}
           </p>
         </div>
       </div>
 
-      {/* ✅ Avertissement si pas d'organisation */}
       {!finalOrgId && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-sm text-red-600">
@@ -172,7 +149,6 @@ const managerId = authUser?.id || authUser?.id || AgroPulseStorage.getUser()?.us
         </div>
       )}
 
-      {/* ✅ Avertissement si utilisateur non authentifié */}
       {!managerId && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
           <p className="text-sm text-red-600">
@@ -189,7 +165,6 @@ const managerId = authUser?.id || authUser?.id || AgroPulseStorage.getUser()?.us
       >
         {({ isSubmitting, values, setFieldValue }) => (
           <Form className="space-y-5">
-            {/* Nom de la ferme */}
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1.5">
                 Nom de la ferme <span className="text-red-500">*</span>
@@ -202,7 +177,6 @@ const managerId = authUser?.id || authUser?.id || AgroPulseStorage.getUser()?.us
               />
             </div>
 
-            {/* Localisation */}
             <div>
               <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1.5">
                 <MapPin className="inline mr-1" size={16} />
@@ -216,7 +190,6 @@ const managerId = authUser?.id || authUser?.id || AgroPulseStorage.getUser()?.us
               />
             </div>
 
-            {/* Superficie et unité */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="area" className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -254,29 +227,11 @@ const managerId = authUser?.id || authUser?.id || AgroPulseStorage.getUser()?.us
               </div>
             </div>
 
-            {/* Photo URL */}
-            {/* <div>
-              <label htmlFor="photo" className="block text-sm font-medium text-gray-700 mb-1.5">
-                <Image className="inline mr-1" size={16} />
-                URL de la photo
-              </label>
-              <Input
-                name="photo"
-                type="url"
-                placeholder="https://exemple.com/photo-ferme.jpg"
-                disabled={!finalOrgId || !managerId || isSubmitting}
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Optionnel : Ajoutez une URL d'image de votre ferme
-              </p>
-            </div> */}
-
-            {/* Bouton de soumission */}
             <div className="flex gap-3 pt-4">
               <motion.div
                 className="flex-1"
-                whileHover={{ scale: (isSubmitting || !finalOrgId || !managerId) ? 1 : 1.02 }}
-                whileTap={{ scale: (isSubmitting || !finalOrgId || !managerId) ? 1 : 0.98 }}
+                whileHover={{ scale: isSubmitting || !finalOrgId || !managerId ? 1 : 1.02 }}
+                whileTap={{ scale: isSubmitting || !finalOrgId || !managerId ? 1 : 0.98 }}
               >
                 <Button
                   type="submit"
@@ -289,20 +244,8 @@ const managerId = authUser?.id || authUser?.id || AgroPulseStorage.getUser()?.us
                 >
                   {isSubmitting ? (
                     <span className="flex items-center justify-center gap-2">
-                      <svg
-                        className="animate-spin h-5 w-5"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
+                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path
                           className="opacity-75"
                           fill="currentColor"

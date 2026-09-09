@@ -1,769 +1,1148 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAppDispatch, useAppSelector } from "../../../hooks/store";
-import { Farm } from "../../../models/farm";
 import {
-  Syringe, Plus, AlertTriangle, CheckCircle2, Clock,
-  Search, Trash2, Pencil, X, Calendar, User,
-  ChevronDown, ChevronUp, Bell, Shield, Activity,
-  FlaskConical, Layers,
+  Search,
+  RefreshCw,
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  Syringe,
+  Pill,
+  Calendar,
+  ChevronRight,
+  Package,
+  CheckCircle2,
+  Clock,
 } from "lucide-react";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 import {
   fetchVaccination,
-  deleteAnimalVaccination,
   createAnimalVaccination,
   updateAnimalVaccination,
+  deleteAnimalVaccination,
+  fetchTreatments,
+  createAnimalTreatment,
+  updateAnimalTreatment,
+  deleteAnimalTreatment,
+  confirmAnimalVaccination,
+  confirmAnimalTreatment,
 } from "../../../store/health/action";
-import { clearError, clearSuccess } from "../../../store/health/slice";
-import { selectCurrentFarm, setCurrentFarm } from "../../../store/farm/slice";
-import { getUserFarms } from "../../../store/farm/action";
+import { selectCurrentFarm } from "../../../store/farm/slice";
 import { getAllAnimals } from "../../../store/animal/action";
-import { toast } from "react-toastify";
+import { getAllLots } from "../../../store/lot/action";
+import { fecthInventory } from "../../../store/alimentations/action";
 import SelectInput from "../../../components/UI/SelectInput";
-import Button from "../../../components/UI/Button";
+import type {
+  Vaccination,
+  FecthVaccination,
+  Treatment,
+  FetchTreatment,
+} from "../../../models/health";
+import {
+  getVaccinationStatus,
+  getTreatmentStatus,
+} from "../../../utilities/healthConfirmation";
+const Spinner = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={`animate-spin ${className}`} viewBox="0 0 24 24">
+    <circle
+      className="opacity-25"
+      cx="12"
+      cy="12"
+      r="10"
+      stroke="currentColor"
+      strokeWidth="4"
+      fill="none"
+    />
+    <path
+      className="opacity-75"
+      fill="currentColor"
+      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+    />
+  </svg>
+);
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const fmt = (d?: string | Date | null) => {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
-};
+const fmtDate = (d?: string | Date | null) =>
+  d
+    ? new Date(d).toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
+    : "—";
+const fmtDateInput = (d?: string | Date | null) =>
+  d ? new Date(d).toISOString().slice(0, 10) : "";
 
-const daysUntil = (d?: string | Date | null): number | null => {
-  if (!d) return null;
-  return Math.ceil((new Date(d).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-};
+type TabType = "vaccinations" | "treatments";
 
-const getUrgency = (nextDue?: string | Date | null) => {
-  const days = daysUntil(nextDue);
-  if (days === null) return { label: "Complété",      color: "done",    icon: CheckCircle2, days: null };
-  if (days < 0)      return { label: "En retard",     color: "overdue", icon: AlertTriangle, days };
-  if (days <= 7)     return { label: `Dans ${days}j`, color: "urgent",  icon: Bell,          days };
-  if (days <= 365)    return { label: `Dans ${days}j`, color: "soon",    icon: Clock,         days };
-  return               { label: `Dans ${days}j`,      color: "ok",      icon: Shield,        days };
-};
+// ── Badge de statut ──────────────────────────────────────────────────────
+const StatusBadge: React.FC<{ confirmed: boolean }> = ({ confirmed }) =>
+  confirmed ? (
+    <span className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg bg-emerald-50 text-vert shrink-0">
+      <CheckCircle2 className="w-3 h-3" /> Confirmé
+    </span>
+  ) : (
+    <span className="flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg bg-amber-50 text-amber-600 shrink-0">
+      <Clock className="w-3 h-3" /> En attente
+    </span>
+  );
 
-// Pill classes par couleur d'urgence
-const pillClass: Record<string, string> = {
-  overdue: "bg-red-100 text-red-600",
-  soon:    "bg-blue-100 text-bleu",
-  ok:      "bg-green-100 text-green-600",
-  done:    "bg-gray-100 text-gray-500",
-};
-
-// Icône bg+color par urgence
-const iconClass: Record<string, string> = {
-  overdue: "bg-red-100 text-red-500",
-  soon:    "bg-blue-100 text-bleu",
-  ok:      "bg-green-100 text-green-600",
-  done:    "bg-gray-100 text-gray-400",
-};
-
-// Bordure gauche carte
-const borderClass: Record<string, string> = {
-  overdue: "border-l-4 border-l-red-400",
-  soon:    "border-l-4 border-l-blue-400",
-  ok:      "border-l-4 border-l-green-400",
-  done:    "",
-};
-
-// ─── VaccinationForm ──────────────────────────────────────────────────────────
-interface VFormProps {
-  farmId?: number;
-  initialData?: any;
+// ── Modal Vaccination ────────────────────────────────────────────────────
+const VaccinationFormModal: React.FC<{
+  farmId: number;
+  animals: any[];
+  lots: any[];
+  medications: any[];
+  initial?: FecthVaccination | null;
+  onClose: () => void;
   onSuccess: () => void;
-  onCancel: () => void;
-}
-
-const VaccinationForm: React.FC<VFormProps> = ({ farmId, initialData, onSuccess, onCancel }) => {
+}> = ({ farmId, animals, lots, medications, initial, onClose, onSuccess }) => {
   const dispatch = useAppDispatch();
-  const { loading, error, success } = useAppSelector((s) => s.health);
-  const currentUser = useAppSelector((s) => s.authentification.auth.user);
-  const animalsEntities = useAppSelector((s) => s.animal.animalist.entities);
-  const animals: any[] = Array.isArray(animalsEntities) ? animalsEntities : [];
-
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    animalId:   initialData?.animalId ?? 0,
-    vaccineName: initialData?.vaccineName ?? "",
-    dateGiven:  initialData?.dateGiven
-      ? new Date(initialData.dateGiven).toISOString().split("T")[0]
-      : new Date().toISOString().split("T")[0],
-    nextDue: initialData?.nextDue
-      ? new Date(initialData.nextDue).toISOString().split("T")[0]
+    animalId: initial?.animalId ? String(initial.animalId) : "",
+    lotId: initial?.lotId ? String(initial.lotId) : "",
+    inventoryId: initial?.inventoryId ? String(initial.inventoryId) : "",
+    vaccineName: initial?.vaccineName || "",
+    dateGiven: fmtDateInput(initial?.dateGiven) || fmtDateInput(new Date()),
+    nextDue: fmtDateInput(initial?.nextDue),
+    administeredBy: initial?.administeredBy
+      ? String(initial.administeredBy)
       : "",
+    quantityUsed: initial?.quantityUsed ?? "",
   });
 
-  useEffect(() => { if (error)   { toast.error(error);   dispatch(clearError());   } }, [error,   dispatch]);
-  useEffect(() => {
-    if (success) {
-      toast.success(initialData?.id ? "Vaccination mise à jour" : "Vaccination enregistrée");
-      dispatch(clearSuccess());
-      onSuccess();
-    }
-  }, [success]);
+  const set = (key: string, value: any) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.animalId)          return toast.error("Sélectionnez un animal");
-    if (!form.vaccineName.trim()) return toast.error("Nom du vaccin requis");
-    if (!currentUser?.id)        return toast.error("Utilisateur non authentifié");
+  const animalOptions = animals.map((a) => ({
+    value: String(a.id),
+    label: a.name ?? `Animal #${a.id}`,
+  }));
+  const lotOptions = lots.map((l: any) => ({
+    value: String(l.id),
+    label: l.name ?? `Lot #${l.id}`,
+  }));
+  const medOptions = medications.map((m: any) => ({
+    value: String(m.id),
+    label: `${m.name} (${m.quantity} ${m.unit} en stock)`,
+  }));
 
-    const payload = {
-      animalId:      Number(form.animalId),
-      vaccineName:   form.vaccineName.trim(),
-      dateGiven:     new Date(form.dateGiven).toISOString(),
-      nextDue:       form.nextDue ? new Date(form.nextDue).toISOString() : undefined,
-      administeredBy: currentUser.id,
-      ...(initialData?.lotId && { lotId: initialData.lotId }),
-    };
-
-    try {
-      if (initialData?.id) {
-        await dispatch(updateAnimalVaccination({ id: initialData.id, data: payload as any })).unwrap();
-      } else {
-        await dispatch(createAnimalVaccination(payload as any)).unwrap();
-      }
-    } catch (err) { console.error(err); }
+  // Sélectionner un médicament dans la liste pré-remplit le nom du vaccin
+  const handleMedicationChange = (value: string | number) => {
+    const selectedValue = Number(value);
+    set("inventoryId", String(selectedValue));
+    const med = medications.find((m: any) => Number(m.id) === selectedValue);
+    if (med && !form.vaccineName) set("vaccineName", med.name);
   };
 
-  const animalOptions = useMemo(() => {
-    if (!animals.length) return [{ value: "", label: "Aucun animal disponible" }];
-    return [
-      { value: "", label: "Choisir un animal" },
-      ...animals.map((a: any) => ({
-        value: a.id.toString(),
-        label: `${a.name}${a.species ? ` (${typeof a.species === "object" ? a.species.name : a.species})` : ""}`,
-      })),
-    ];
-  }, [animals]);
+  const canSubmit =
+    (form.animalId || form.lotId) && form.vaccineName && form.dateGiven;
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    setSaving(true);
+    try {
+      const payload: Vaccination = {
+        animalId: form.animalId ? Number(form.animalId) : null,
+        lotId: form.lotId ? Number(form.lotId) : null,
+        inventoryId: form.inventoryId ? Number(form.inventoryId) : null,
+        vaccineName: form.vaccineName,
+        dateGiven: form.dateGiven,
+        nextDue: form.nextDue || null,
+        administeredBy: form.administeredBy
+          ? Number(form.administeredBy)
+          : null,
+        quantityUsed: form.quantityUsed ? Number(form.quantityUsed) : null,
+        farmId,
+      };
+      if (initial) {
+        await dispatch(
+          updateAnimalVaccination({ id: initial.id, data: payload }),
+        ).unwrap();
+        toast.success("Vaccination mise à jour");
+      } else {
+        await dispatch(createAnimalVaccination(payload)).unwrap();
+        toast.success("Vaccination enregistrée");
+      }
+      onSuccess();
+    } catch (err) {
+      console.error(err);
+      toast.error("Une erreur est survenue");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputClass =
+    "w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent text-sm transition";
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2.5 bg-jaune/10 rounded-xl text-jaune"><Syringe size={22} /></div>
-        <div>
-          <h2 className="text-base font-black text-gray-900">
-            {initialData?.id ? "Modifier le vaccin" : "Nouveau vaccin"}
-          </h2>
-          <p className="text-xs text-gray-400">Enregistrement d'une vaccination</p>
+    <div
+      className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[92vh] flex flex-col border border-gray-100"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+              <Syringe className="w-4 h-4 text-indigo-600" />
+            </div>
+            <h2 className="font-bold text-gray-900 text-sm">
+              {initial ? "Modifier la vaccination" : "Nouvelle vaccination"}
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-gray-100 rounded-xl transition"
+          >
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
         </div>
-        <button type="button" onClick={onCancel} className="ml-auto p-1.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-500 transition-colors">
-          <X size={16} />
-        </button>
-      </div>
 
-      <div className="flex flex-col gap-4">
-        {/* Animal */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Animal concerné *</label>
-          <SelectInput
-            value={form.animalId.toString()}
-            onChange={(v) => setForm({ ...form, animalId: Number(v) })}
-            options={animalOptions}
-            placeholder="Choisir l'animal"
-            disabled={loading}
+        <div className="p-6 space-y-5 overflow-y-auto flex-1">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                Animal
+              </label>
+              <SelectInput
+                value={form.animalId}
+                onChange={(v) => set("animalId", v)}
+                options={animalOptions}
+                placeholder="— choisir —"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                ou Lot
+              </label>
+              <SelectInput
+                value={form.lotId}
+                onChange={(v) => set("lotId", v)}
+                options={lotOptions}
+                placeholder="— choisir —"
+              />
+            </div>
+          </div>
+          {!form.animalId && !form.lotId && (
+            <p className="text-[11px] text-yellow-500 font-semibold -mt-3">
+              Choisis un animal ou un lot (au moins un des deux).
+            </p>
+          )}
+
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider  mb-2 flex items-center gap-1.5">
+              <Package className="w-3.5 h-3.5" /> Médicament (depuis
+              l'inventaire)
+            </label>
+            <SelectInput
+              value={form.inventoryId}
+              onChange={handleMedicationChange}
+              options={medOptions}
+              placeholder="— choisir dans le stock —"
+            />
+            {medOptions.length === 0 && (
+              <p className="text-[10px] text-yellow-500 font-semibold mt-1.5">
+                Aucun médicament trouvé dans l'inventaire de cette ferme.
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+              Nom du vaccin <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="text"
+              value={form.vaccineName}
+              onChange={(e) => set("vaccineName", e.target.value)}
+              placeholder="ex: Clostridium, Rage..."
+              className={inputClass}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                Date d'administration <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="date"
+                value={form.dateGiven}
+                onChange={(e) => set("dateGiven", e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                Prochain rappel
+              </label>
+              <input
+                type="date"
+                value={form.nextDue}
+                onChange={(e) => set("nextDue", e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                Administré par (ID){" "}
+                {/* ⚠️ pas de liste d'utilisateurs vétérinaires — cf. remarque ConsultationsDashboard */}
+              </label>
+              <input
+                type="number"
+                value={form.administeredBy}
+                onChange={(e) => set("administeredBy", e.target.value)}
+                placeholder="ID utilisateur"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                Quantité utilisée
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={form.quantityUsed}
+                onChange={(e) => set("quantityUsed", e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 transition"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={saving || !canSubmit}
+            className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-indigo-600 text-white disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-indigo-700 transition"
+          >
+            {saving ? (
+              <>
+                <Spinner /> Enregistrement…
+              </>
+            ) : initial ? (
+              "Enregistrer"
+            ) : (
+              "Créer"
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Modal Traitement ─────────────────────────────────────────────────────
+const TreatmentFormModal: React.FC<{
+  farmId: number;
+  animals: any[];
+  lots: any[];
+  medications: any[];
+  initial?: FetchTreatment | null;
+  onClose: () => void;
+  onSuccess: () => void;
+}> = ({ farmId, animals, lots, medications, initial, onClose, onSuccess }) => {
+  const dispatch = useAppDispatch();
+  const [saving, setSaving] = useState(false);
+
+  const [form, setForm] = useState({
+    animalId: initial?.animalId ? String(initial.animalId) : "",
+    lotId: initial?.lotId ? String(initial.lotId) : "",
+    inventoryId: initial?.inventoryId ? String(initial.inventoryId) : "",
+    treatmentName: initial?.treatmentName || "",
+    medication: initial?.medication || "",
+    dosage: initial?.dosage || "",
+    quantityUsed: initial?.quantityUsed ?? "",
+    startDate: fmtDateInput(initial?.startDate) || fmtDateInput(new Date()),
+    endDate: fmtDateInput(initial?.endDate),
+    administeredBy: initial?.administeredBy
+      ? String(initial.administeredBy)
+      : "",
+    frequencyDays: initial?.frequencyDays ? String(initial.frequencyDays) : "1",
+  });
+
+  const set = (key: string, value: any) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
+
+  const animalOptions = animals.map((a) => ({
+    value: String(a.id),
+    label: a.name ?? `Animal #${a.id}`,
+  }));
+  const lotOptions = lots.map((l: any) => ({
+    value: String(l.id),
+    label: l.name ?? `Lot #${l.id}`,
+  }));
+  const medOptions = medications.map((m: any) => ({
+    value: String(m.id),
+    label: `${m.name} (${m.quantity} ${m.unit} en stock)`,
+  }));
+
+  const handleMedicationChange = (value: string | number) => {
+    const v = String(value);
+    set("inventoryId", v);
+    const med = medications.find((m: any) => String(m.id) === v);
+    if (med && !form.medication) set("medication", med.name);
+  };
+
+  const canSubmit =
+    (form.animalId || form.lotId) && form.treatmentName && form.startDate;
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    setSaving(true);
+    try {
+      const payload: Treatment = {
+        animalId: form.animalId ? Number(form.animalId) : null,
+        lotId: form.lotId ? Number(form.lotId) : null,
+        inventoryId: form.inventoryId ? Number(form.inventoryId) : null,
+        treatmentName: form.treatmentName,
+        medication: form.medication || undefined,
+        dosage: form.dosage || undefined,
+        quantityUsed: form.quantityUsed ? Number(form.quantityUsed) : null,
+        startDate: form.startDate,
+        endDate: form.endDate || null,
+        administeredBy: form.administeredBy
+          ? Number(form.administeredBy)
+          : null,
+        frequencyDays: Number(form.frequencyDays) || 1,
+        farmId,
+      };
+      if (initial) {
+        await dispatch(
+          updateAnimalTreatment({ id: initial.id, data: payload }),
+        ).unwrap();
+        toast.success("Traitement mis à jour");
+      } else {
+        await dispatch(createAnimalTreatment(payload)).unwrap();
+        toast.success("Traitement enregistré");
+      }
+      onSuccess();
+    } catch (err) {
+      console.error(err);
+      toast.error("Une erreur est survenue");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputClass =
+    "w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent text-sm transition";
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl w-full max-w-lg shadow-2xl max-h-[92vh] flex flex-col border border-gray-100"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+              <Pill className="w-4 h-4 text-jaune" />
+            </div>
+            <h2 className="font-bold text-gray-900 text-sm">
+              {initial ? "Modifier le traitement" : "Nouveau traitement"}
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-gray-100 rounded-xl transition"
+          >
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5 overflow-y-auto flex-1">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                Animal
+              </label>
+              <SelectInput
+                value={form.animalId}
+                onChange={(v) => set("animalId", v)}
+                options={animalOptions}
+                placeholder="— choisir —"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                ou Lot
+              </label>
+              <SelectInput
+                value={form.lotId}
+                onChange={(v) => set("lotId", v)}
+                options={lotOptions}
+                placeholder="— choisir —"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+              Nom du traitement <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="text"
+              value={form.treatmentName}
+              onChange={(e) => set("treatmentName", e.target.value)}
+              placeholder="ex: Antiparasitaire, Antibiotique..."
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <Package className="w-3.5 h-3.5" /> Médicament (depuis
+              l'inventaire)
+            </label>
+            <SelectInput
+              value={form.inventoryId}
+              onChange={handleMedicationChange}
+              options={medOptions}
+              placeholder="— choisir dans le stock —"
+            />
+            {medOptions.length === 0 && (
+              <p className="text-[10px] text-yellow-500 font-semibold mt-1.5">
+                Aucun médicament trouvé dans l'inventaire de cette ferme.
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                Dosage
+              </label>
+              <input
+                type="text"
+                value={form.dosage}
+                onChange={(e) => set("dosage", e.target.value)}
+                placeholder="ex: 5ml/jour"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                Quantité utilisée
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={form.quantityUsed}
+                onChange={(e) => set("quantityUsed", e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                Fréquence (jours)
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={form.frequencyDays}
+                onChange={(e) => set("frequencyDays", e.target.value)}
+                placeholder="ex: 1 = tous les jours, 3 = tous les 3 jours"
+                className={inputClass}
+              />
+              <p className="text-[10px] text-gray-400 mt-1.5">
+                Intervalle entre deux confirmations autorisées.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                Début <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="date"
+                value={form.startDate}
+                onChange={(e) => set("startDate", e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                Fin
+              </label>
+              <input
+                type="date"
+                value={form.endDate}
+                onChange={(e) => set("endDate", e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+              Administré par (ID)
+            </label>
+            <input
+              type="number"
+              value={form.administeredBy}
+              onChange={(e) => set("administeredBy", e.target.value)}
+              placeholder="ID utilisateur"
+              className={inputClass}
+            />
+          </div>
+        </div>
+
+        <div className="px-6 py-4 border-t border-gray-100 flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-gray-100 text-gray-600 hover:bg-gray-200 transition"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={saving || !canSubmit}
+            className="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-jaune text-white disabled:opacity-50 flex items-center justify-center gap-2 hover:bg-darkJaune transition"
+          >
+            {saving ? (
+              <>
+                <Spinner /> Enregistrement…
+              </>
+            ) : initial ? (
+              "Enregistrer"
+            ) : (
+              "Créer"
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Page principale ───────────────────────────────────────────────────────
+// ── Page principale ───────────────────────────────────────────────────────
+const VaccinsTraitementsDashboard: React.FC = () => {
+  const dispatch = useAppDispatch();
+  const currentFarm = useAppSelector(selectCurrentFarm);
+  const farmId = currentFarm?.id;
+
+  const [tab, setTab] = useState<TabType>("vaccinations");
+
+  const vaccinations = useAppSelector((s: any) => s.health.vaccinations) ?? [];
+  const treatments = useAppSelector((s: any) => s.health.treatments) ?? [];
+  const isLoading = useAppSelector((s: any) => s.health.loading);
+
+  const animalsRaw = useAppSelector((s: any) => s.animal?.animalist?.entities);
+  const lotsRaw = useAppSelector((s: any) => s.lot?.entities);
+  const medicationsRaw =
+    useAppSelector((state) => state.alimentation.Inventory) ?? [];
+
+  const animals = Array.isArray(animalsRaw) ? animalsRaw : [];
+  const lots = Array.isArray(lotsRaw) ? lotsRaw : [];
+  const allMedications = Array.isArray(medicationsRaw) ? medicationsRaw : [];
+  const medications = allMedications.filter(
+    (m: any) => !m.category || m.category === "MEDICINE",
+  );
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showVaccForm, setShowVaccForm] = useState(false);
+  const [editingVacc, setEditingVacc] = useState<FecthVaccination | null>(null);
+  const [showTreatForm, setShowTreatForm] = useState(false);
+  const [editingTreat, setEditingTreat] = useState<FetchTreatment | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: TabType;
+    id: number;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // ── Confirmation vaccination/traitement ──
+  const [confirmingId, setConfirmingId] = useState<number | null>(null);
+
+  const handleConfirmVaccination = async (id: number) => {
+    setConfirmingId(id);
+    try {
+      await dispatch(confirmAnimalVaccination({ id })).unwrap();
+      toast.success("Vaccination confirmée — stock mis à jour");
+    } catch (err: any) {
+      toast.error(err?.message || "Erreur lors de la confirmation");
+    } finally {
+      setConfirmingId(null);
+    }
+  };
+
+  const handleConfirmTreatment = async (id: number) => {
+    setConfirmingId(id);
+    try {
+      await dispatch(confirmAnimalTreatment({ id })).unwrap();
+      toast.success("Traitement confirmé — stock mis à jour");
+    } catch (err: any) {
+      toast.error(err?.message || "Erreur lors de la confirmation");
+    } finally {
+      setConfirmingId(null);
+    }
+  };
+
+  useEffect(() => {
+    if (farmId) {
+      dispatch(fetchVaccination({ farmId, limit: 200 }));
+      dispatch(fetchTreatments({ farmId, limit: 200 }));
+      dispatch(getAllAnimals({ farmId, limit: 200, page: 1 }));
+      dispatch(getAllLots({ farmId, limit: 100 }));
+      dispatch(fecthInventory({ farmId, category: "MEDICINE", limit: 200 }));
+    }
+  }, [dispatch, farmId]);
+
+  const refresh = () => {
+    if (!farmId) return;
+    if (tab === "vaccinations")
+      dispatch(fetchVaccination({ farmId, limit: 200 }));
+    else dispatch(fetchTreatments({ farmId, limit: 200 }));
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      if (deleteTarget.type === "vaccinations") {
+        await dispatch(
+          deleteAnimalVaccination({ id: deleteTarget.id }),
+        ).unwrap();
+        toast.success("Vaccination supprimée");
+      } else {
+        await dispatch(deleteAnimalTreatment({ id: deleteTarget.id })).unwrap();
+        toast.success("Traitement supprimé");
+      }
+      setDeleteTarget(null);
+    } catch {
+      toast.error("Erreur lors de la suppression");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const findAnimal = (id?: number | null) =>
+    animals.find((a: any) => a.id === id);
+  const findLot = (id?: number | null) => lots.find((l: any) => l.id === id);
+
+  const filteredVacc = useMemo(() => {
+    const list = Array.isArray(vaccinations) ? vaccinations : [];
+    if (!searchTerm) return list;
+    const q = searchTerm.toLowerCase();
+    return list.filter((v: any) =>
+      [
+        v.vaccineName,
+        findAnimal(v.animalId)?.name,
+        findLot(v.lotId)?.name,
+      ].some((val) => val?.toLowerCase().includes(q)),
+    );
+  }, [vaccinations, searchTerm, animals, lots]);
+
+  const filteredTreat = useMemo(() => {
+    const list = Array.isArray(treatments) ? treatments : [];
+    if (!searchTerm) return list;
+    const q = searchTerm.toLowerCase();
+    return list.filter((t: any) =>
+      [
+        t.treatmentName,
+        t.medication,
+        findAnimal(t.animalId)?.name,
+        findLot(t.lotId)?.name,
+      ].some((val) => val?.toLowerCase().includes(q)),
+    );
+  }, [treatments, searchTerm, animals, lots]);
+
+  return (
+    <>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar
+        newestOnTop
+        closeOnClick
+        pauseOnHover
+        toastClassName="!rounded-xl !shadow-lg !text-sm !font-medium"
+      />
+
+      <div className="flex flex-col gap-5 p-4 pt-20 min-h-screen bg-bg_dash">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-xs text-gray-400 mb-1">
+              <span>Santé Animale</span>
+              <ChevronRight className="w-3 h-3" />
+              <span className="text-gray-600 font-medium">
+                Vaccins & Traitements
+              </span>
+            </div>
+            <h1 className="text-2xl font-black text-darkText tracking-tight">
+              Vaccins & Traitements
+            </h1>
+            <p className="text-sm text-gray-400 mt-0.5">
+              Suivi sanitaire et pharmacie de la ferme
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={refresh}
+              className="p-2.5 rounded-xl hover:bg-white border border-transparent hover:border-gray-200 text-gray-500 transition"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() =>
+                tab === "vaccinations"
+                  ? (setEditingVacc(null), setShowVaccForm(true))
+                  : (setEditingTreat(null), setShowTreatForm(true))
+              }
+              className={`flex items-center gap-2 px-4 py-2.5 text-white rounded-xl font-semibold text-sm transition shadow-sm ${tab === "vaccinations" ? "bg-indigo-600 hover:bg-indigo-700" : "bg-jaune   hover:bg-darkJaune"}`}
+            >
+              <Plus className="w-4 h-4" />{" "}
+              {tab === "vaccinations"
+                ? "Nouvelle vaccination"
+                : "Nouveau traitement"}
+            </button>
+          </div>
+        </div>
+
+        <div className="flex gap-1 bg-white border border-gray-100 rounded-xl p-1 w-fit">
+          <button
+            onClick={() => setTab("vaccinations")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition ${tab === "vaccinations" ? "bg-indigo-600 text-white" : "text-gray-500 hover:text-gray-700"}`}
+          >
+            <Syringe className="w-4 h-4" /> Vaccinations ({vaccinations.length})
+          </button>
+          <button
+            onClick={() => setTab("treatments")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition ${tab === "treatments" ? "bg-jaune text-white" : "text-gray-500 hover:text-gray-700"}`}
+          >
+            <Pill className="w-4 h-4" /> Traitements ({treatments.length})
+          </button>
+        </div>
+
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <input
+            type="text"
+            placeholder="Rechercher..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-300 transition"
           />
         </div>
 
-        {/* Nom vaccin */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Nom du vaccin *</label>
-          <div className="relative">
-            <FlaskConical size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <input
-              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm font-medium outline-none focus:border-blue-300 focus:ring-2 focus:ring-jaune/10 transition-all"
-              placeholder="Ex: Fièvre aphteuse, Charbon..."
-              value={form.vaccineName}
-              onChange={(e) => setForm({ ...form, vaccineName: e.target.value })}
-              required disabled={loading}
-            />
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-24 gap-3 text-gray-400">
+            <Spinner className="w-8 h-8" />
+            <span className="text-sm">Chargement…</span>
           </div>
-        </div>
-
-        {/* Dates */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Date d'administration *</label>
-            <div className="relative">
-              <Calendar size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              <input
-                type="date"
-                className="w-full pl-10 pr-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm font-medium outline-none focus:border-blue-300 focus:ring-2 focus:ring-jaune/10 transition-all"
-                value={form.dateGiven}
-                max={new Date().toISOString().split("T")[0]}
-                onChange={(e) => setForm({ ...form, dateGiven: e.target.value })}
-                required disabled={loading}
-              />
-            </div>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Prochain rappel</label>
-            <div className="relative">
-              <Bell size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-              <input
-                type="date"
-                className="w-full pl-10 pr-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm font-medium outline-none focus:border-blue-300 focus:ring-2 focus:ring-jaune/10 transition-all"
-                value={form.nextDue}
-                min={new Date().toISOString().split("T")[0]}
-                onChange={(e) => setForm({ ...form, nextDue: e.target.value })}
-                disabled={loading}
-              />
-            </div>
-          </div>
-        </div>
-
-        <p className="text-[10px] text-gray-400 italic ml-1">* Champs obligatoires</p>
-
-        {/* Boutons */}
-        <div className="flex gap-3 pt-2">
-          <Button
-            type="button" onClick={onCancel} disabled={loading}
-            className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-sm transition-colors disabled:opacity-50"
-          >
-            Annuler
-          </Button>
-          <Button
-            type="submit" disabled={loading || !farmId}
-            className="flex-1 flex items-center justify-center gap-2 py-3 bg-jaune hover:bg-jaune text-white rounded-xl font-bold text-sm shadow-md shadow-blue-200 transition-colors disabled:opacity-60"
-          >
-            {loading ? (
-              <><div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Enregistrement...</>
-            ) : "Enregistrer"}
-          </Button>
-        </div>
-      </div>
-    </form>
-  );
-};
-
-// ─── Main Dashboard ────────────────────────────────────────────────────────────
-const VaccinationDashboard: React.FC<{ animalId?: number }> = ({ animalId }) => {
-  const dispatch = useAppDispatch();
-  const { vaccinations: rawVaccinations, loading } = useAppSelector((s) => s.health);
-  const currentUser  = useAppSelector((s) => s.authentification.auth.user);
-  const currentFarm  = useAppSelector(selectCurrentFarm);
-  const animalsEntities = useAppSelector((s) => s.animal.animalist.entities);
-  const animals: any[] = Array.isArray(animalsEntities) ? animalsEntities : [];
-  const farmId = currentFarm?.id;
-
-  const [isLoadingFarm,   setIsLoadingFarm]   = useState(false);
-  const [showForm,        setShowForm]         = useState(false);
-  const [editingVaccin,   setEditingVaccin]    = useState<any | null>(null);
-  const [detailVaccin,    setDetailVaccin]     = useState<any | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId]  = useState<number | null>(null);
-  const [isDeleting,      setIsDeleting]       = useState(false);
-  const [searchTerm,      setSearchTerm]       = useState("");
-  const [filterStatus,    setFilterStatus]     = useState<"all" | "overdue" | "urgent" | "soon" | "ok" | "done">("all");
-  const [filterAnimalId,  setFilterAnimalId]   = useState<string>("all");
-  const [expandedId,      setExpandedId]       = useState<number | null>(null);
-  const [activeTab,       setActiveTab]        = useState<"list" | "calendar">("list");
-
-  // ─── Hydratation ferme ────────────────────────────────────────────────────
-  useEffect(() => {
-    const hydrate = async () => {
-      if (!currentUser?.id || currentFarm?.id) return;
-      setIsLoadingFarm(true);
-      try {
-        const result = await dispatch(getUserFarms()).unwrap();
-        const farms  = result?.data || result;
-        if (Array.isArray(farms) && farms.length > 0) {
-          const saved   = localStorage.getItem("last_farm_id");
-          const toUse   = saved
-            ? (farms.find((f: Farm) => f.id === parseInt(saved, 10)) ?? farms[0])
-            : farms[0];
-          if (toUse) dispatch(setCurrentFarm(toUse));
-        }
-      } catch (e) { console.error(e); }
-      finally { setIsLoadingFarm(false); }
-    };
-    hydrate();
-  }, [currentUser?.id, currentFarm?.id, dispatch]);
-
-  // ─── Chargement animaux ───────────────────────────────────────────────────
-  useEffect(() => {
-    if (farmId) dispatch(getAllAnimals({ farmId, limit: 200 }));
-  }, [dispatch, farmId]);
-
-  // ─── Chargement vaccins ───────────────────────────────────────────────────
-  const loadVaccinations = useCallback(() => {
-    if (!farmId) return;
-    dispatch(fetchVaccination(animalId ? String(animalId) : ""));
-  }, [dispatch, farmId, animalId]);
-
-  useEffect(() => { loadVaccinations(); }, [loadVaccinations]);
-
-  // ─── Normalisation ────────────────────────────────────────────────────────
-  const vaccinsList: any[] = useMemo(() => {
-    const raw = rawVaccinations as any;
-    if (Array.isArray(raw))     return raw;
-    if (raw?.vaccinations)      return raw.vaccinations;
-    return [];
-  }, [rawVaccinations]);
-
-  const normalized = useMemo(() => vaccinsList.map((v: any) => ({
-    ...v,
-    animalName: v.animalName ?? v.animal?.name  ?? "—",
-    speciesName: v.animal?.species?.name ?? v.animal?.species ?? "—",
-    adminName:  v.administeredBy?.name ?? v.admin?.name ?? "—",
-  })), [vaccinsList]);
-
-  // ─── Filtrage ─────────────────────────────────────────────────────────────
-  const filtered = useMemo(() => normalized
-    .filter((v) => {
-      const u = getUrgency(v.nextDue);
-      if (filterStatus !== "all" && u.color !== filterStatus) return false;
-      if (filterAnimalId !== "all" && String(v.animalId) !== filterAnimalId) return false;
-      if (searchTerm) {
-        const s = searchTerm.toLowerCase();
-        return v.vaccineName?.toLowerCase().includes(s) || v.animalName?.toLowerCase().includes(s);
-      }
-      return true;
-    })
-    .sort((a, b) => (daysUntil(a.nextDue) ?? 999) - (daysUntil(b.nextDue) ?? 999)),
-  [normalized, filterStatus, filterAnimalId, searchTerm]);
-
-  // ─── Stats ────────────────────────────────────────────────────────────────
-  const stats = useMemo(() => ({
-    total:   normalized.length,
-    overdue: normalized.filter(v => getUrgency(v.nextDue).color === "overdue").length,
-    urgent:  normalized.filter(v => ["urgent", "soon"].includes(getUrgency(v.nextDue).color)).length,
-    done:    normalized.filter(v => getUrgency(v.nextDue).color === "done").length,
-  }), [normalized]);
-
-  // ─── Calendrier ───────────────────────────────────────────────────────────
-  const calendarGroups = useMemo(() => {
-    const groups: Record<string, any[]> = {};
-    normalized
-      .filter(v => v.nextDue && (daysUntil(v.nextDue) ?? -1) >= 0)
-      .sort((a, b) => new Date(a.nextDue).getTime() - new Date(b.nextDue).getTime())
-      .forEach(v => {
-        const key = new Date(v.nextDue).toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(v);
-      });
-    return groups;
-  }, [normalized]);
-
-  // ─── Delete ───────────────────────────────────────────────────────────────
-  const handleDelete = async (id: number) => {
-    setIsDeleting(true);
-    try {
-      await dispatch(deleteAnimalVaccination({ id })).unwrap();
-      toast.success("Vaccination supprimée");
-      setConfirmDeleteId(null);
-      setDetailVaccin(null);
-    } catch { toast.error("Erreur lors de la suppression"); }
-    finally { setIsDeleting(false); }
-  };
-
-  const animalFilterOptions = useMemo(() => [
-    { value: "all", label: "Tous les animaux" },
-    ...animals.map((a: any) => ({ value: a.id.toString(), label: a.name })),
-  ], [animals]);
-
-  // ─── Loading / empty guards ───────────────────────────────────────────────
-  if (isLoadingFarm) return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-gray-500">
-      <div className="w-11 h-11 rounded-full border-[3px] border-gray-200 border-t-blue-500 animate-spin" />
-      <p className="font-semibold">Chargement de la ferme...</p>
-    </div>
-  );
-
-  if (!farmId) return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-      <div className="p-5 bg-orange-50 rounded-2xl text-orange-500"><AlertTriangle size={32} /></div>
-      <p className="font-bold text-gray-700">Aucune ferme sélectionnée</p>
-    </div>
-  );
-
-  return (
-    <div className="flex flex-col gap-5 p-4 pt-20 min-h-screen bg-gray-50">
-
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-jaune/10 rounded-xl text-jaune"><Syringe size={22} /></div>
-          <div>
-            <h2 className="text-2xl font-black text-gray-900">Vaccins & Traitements</h2>
-            <p className="text-xs text-gray-400 font-medium mt-0.5">
-              {currentFarm?.name ?? ""} • Suivi du calendrier vaccinal
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={() => { setEditingVaccin(null); setShowForm(true); }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-jaune hover:bg-jaune text-white rounded-xl font-bold text-sm shadow-md shadow-blue-200 transition-all hover:-translate-y-0.5"
-        >
-          <Plus size={16} /> Nouveau vaccin
-        </button>
-      </div>
-
-      {/* ── Alerte overdue ── */}
-      {stats.overdue > 0 && (
-        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-2xl">
-          <div className="p-2 bg-red-500 text-white rounded-xl shrink-0 animate-pulse">
-            <AlertTriangle size={18} />
-          </div>
-          <div>
-            <p className="text-sm font-black text-red-600">
-              {stats.overdue} rappel{stats.overdue > 1 ? "s" : ""} en retard !
-            </p>
-            <p className="text-xs text-red-400">Des animaux nécessitent une vaccination immédiate.</p>
-          </div>
-        </div>
-      )}
-
-      {/* ── Stats ── */}
-      {!loading && normalized.length > 0 && (
-        <div className="grid grid-cols-4 gap-3">
-          {[
-            { key: "all",     val: stats.total,   label: "Total",      cls: "text-gray-700"   },
-            { key: "overdue", val: stats.overdue,  label: "En retard",  cls: "text-rouge"    },
-            { key: "urgent",  val: stats.urgent,   label: "À venir",    cls: "text-bleu" },
-            { key: "done",    val: stats.done,     label: "Complétés",  cls: "text-vert"  },
-          ].map(s => (
-            <div
-              key={s.key}
-              onClick={() => setFilterStatus(s.key as any)}
-              className={`bg-white rounded-2xl p-3 text-center border shadow-sm cursor-pointer hover:-translate-y-0.5 transition-all ${
-                filterStatus === s.key ? "border-2 border-vert" : "border-gray-100"
-              }`}
-            >
-              <p className={`text-2xl font-black ${s.cls}`}>{s.val}</p>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mt-1">{s.label}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Tabs ── */}
-      <div className="flex bg-white rounded-2xl p-1 gap-1 border border-gray-100 shadow-sm">
-        {([
-          { key: "list",     label: "Liste",              icon: <Layers size={15} /> },
-          { key: "calendar", label: "Calendrier rappels", icon: <Calendar size={15} /> },
-        ] as const).map(t => (
-          <button
-            key={t.key}
-            onClick={() => setActiveTab(t.key)}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
-              activeTab === t.key
-                ? "bg-jaune text-white shadow-md shadow-blue-200"
-                : "text-gray-500 hover:bg-gray-50"
-            }`}
-          >
-            {t.icon} {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* ── Toolbar ── */}
-      {activeTab === "list" && (
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col gap-3">
-          <div className="relative">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <input
-              className="w-full pl-10 pr-9 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm font-medium outline-none focus:border-blue-300 focus:ring-2 focus:ring-jaune/10 transition-all"
-              placeholder="Rechercher vaccin, animal..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            {searchTerm && (
-              <button onClick={() => setSearchTerm("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                <X size={13} />
-              </button>
-            )}
-          </div>
-          <select
-            className="w-full px-3 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm font-semibold text-gray-700 outline-none cursor-pointer"
-            value={filterAnimalId}
-            onChange={(e) => setFilterAnimalId(e.target.value)}
-          >
-            {animalFilterOptions.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* ══ CONTENU ══ */}
-      {loading ? (
-        <div className="flex flex-col gap-3">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="bg-white rounded-2xl p-4 border border-gray-100 flex gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gray-100 animate-pulse shrink-0" />
-              <div className="flex-1 flex flex-col gap-2 pt-1">
-                <div className="h-3 rounded-lg bg-gray-100 animate-pulse w-2/5" />
-                <div className="h-3.5 rounded-lg bg-gray-100 animate-pulse w-3/4" />
-                <div className="h-2.5 rounded-lg bg-gray-100 animate-pulse w-1/3" />
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : activeTab === "list" ? (
-        filtered.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <div className="p-5 bg-gray-100 rounded-2xl text-gray-300"><Syringe size={28} /></div>
-            <p className="text-sm font-black text-gray-500">Aucun vaccin trouvé</p>
-            <p className="text-xs text-gray-400">
-              {searchTerm || filterStatus !== "all" ? "Modifiez vos filtres" : "Ajoutez le premier vaccin"}
-            </p>
-            {!searchTerm && filterStatus === "all" && (
-              <button
-                onClick={() => setShowForm(true)}
-                className="mt-1 flex items-center gap-2 px-4 py-2.5 bg-jaune text-white text-sm rounded-xl font-bold shadow-md shadow-blue-200"
-              >
-                <Plus size={15} /> Ajouter un vaccin
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {filtered.map((v: any) => {
-              const u = getUrgency(v.nextDue);
-              const UIcon = u.icon;
-              const isExpanded = expandedId === v.id;
-              return (
-                <div key={v.id} className={`bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all ${borderClass[u.color] ?? ""}`}>
-                  <div className="flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50/60 transition-colors" onClick={() => setDetailVaccin(v)}>
-                    <div className={`p-2 rounded-xl shrink-0 ${iconClass[u.color]}`}>
-                      <UIcon size={18} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide inline-flex items-center gap-1 ${pillClass[u.color]}`}>
-                          <UIcon size={9} /> {u.label}
-                        </span>
-                      </div>
-                      <p className="text-sm font-bold text-gray-900 truncate">{v.vaccineName || "Vaccin non précisé"}</p>
-                      <div className="flex items-center gap-1 text-xs text-gray-500 font-medium mt-0.5">
-                        <User size={10} /> {v.animalName}
-                        {v.speciesName !== "—" && <span className="text-gray-400">· {v.speciesName}</span>}
-                      </div>
-                      <div className="flex gap-3 mt-0.5 text-[11px] text-gray-400 flex-wrap">
-                        <span className="flex items-center gap-1"><Calendar size={9} /> {fmt(v.dateGiven)}</span>
-                        {v.nextDue && <span className="flex items-center gap-1"><Bell size={9} /> {fmt(v.nextDue)}</span>}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => { setEditingVaccin(v); setShowForm(true); }} className="p-2 rounded-xl text-gray-400 hover:text-jaune hover:bg-blue-50 transition-colors">
-                        <Pencil size={14} />
-                      </button>
-                      <button onClick={() => setConfirmDeleteId(v.id)} className="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors">
-                        <Trash2 size={14} />
-                      </button>
-                      <button onClick={() => setExpandedId(isExpanded ? null : v.id)} className="p-2 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
-                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                      </button>
-                    </div>
-                  </div>
-
-                  {isExpanded && (
-                    <div className="border-t border-gray-50 px-4 pb-4 pt-3 flex flex-col gap-3">
-                      {v.adminName !== "—" && (
-                        <div>
-                          <p className="flex items-center gap-1 text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1.5">
-                            <User size={10} /> Administré par
-                          </p>
-                          <p className="text-sm text-gray-700 bg-gray-50 rounded-xl p-3">{v.adminName}</p>
-                        </div>
-                      )}
-                      {v.notes && (
-                        <div>
-                          <p className="flex items-center gap-1 text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1.5">
-                            <Activity size={10} /> Notes
-                          </p>
-                          <p className="text-sm text-gray-700 bg-gray-50 rounded-xl p-3">{v.notes}</p>
-                        </div>
-                      )}
-                      {v.adminName === "—" && !v.notes && (
-                        <p className="text-xs text-gray-400">Aucun détail supplémentaire.</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )
-      ) : (
-        // ── Calendrier ──
-        <div className="flex flex-col gap-6">
-          {Object.keys(calendarGroups).length === 0 ? (
-            <div className="flex flex-col items-center gap-3 py-16 text-center">
-              <CheckCircle2 size={36} className="text-green-500" />
-              <p className="text-sm font-bold text-gray-500">Aucun rappel à venir — tout est à jour !</p>
+        ) : tab === "vaccinations" ? (
+          filteredVacc.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-100 flex flex-col items-center justify-center py-24 gap-3 text-gray-400">
+              <Syringe className="w-10 h-10 text-gray-200" />
+              <p className="font-semibold text-gray-500">
+                Aucune vaccination enregistrée
+              </p>
             </div>
           ) : (
-            Object.entries(calendarGroups).map(([month, items]) => (
-              <div key={month}>
-                <div className="flex items-center gap-3 mb-3">
-                  <p className="text-xs font-black uppercase tracking-widest text-gray-500">{month}</p>
-                  <div className="flex-1 h-px bg-gray-200" />
-                </div>
-                <div className="flex flex-col gap-2">
-                  {items.map((v: any) => {
-                    const d = new Date(v.nextDue);
-                    const u = getUrgency(v.nextDue);
-                    const dateGradient =
-                      u.color === "overdue" ? "bg-red-500" :
-                      u.color === "urgent"  ? "bg-orange-500" :
-                      u.color === "soon"    ? "bg-bleu" :
-                      u.color === "done"    ? "bg-vert" :
-                      "bg-gray-300";
-                    return (
-                      <div
-                        key={v.id}
-                        onClick={() => setDetailVaccin(v)}
-                        className="bg-white rounded-2xl p-3 flex items-center gap-3 border border-gray-100 shadow-sm cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all"
-                      >
-                        <div className={`${dateGradient} text-white rounded-xl px-3 py-2 text-center shrink-0 min-w-[48px]`}>
-                          <div className="text-lg font-black leading-none">{d.getDate()}</div>
-                          <div className="text-[10px] font-bold uppercase opacity-85">
-                            {d.toLocaleDateString("fr-FR", { month: "short" })}
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-gray-900 truncate">{v.vaccineName}</p>
-                          <p className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
-                            <User size={10} /> {v.animalName}
-                          </p>
-                        </div>
-                        <span className={`text-[10px] font-black px-2 py-1 rounded-full uppercase tracking-wide ${pillClass[u.color]}`}>
-                          {u.label}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50">
+              {filteredVacc.map((v: FecthVaccination) => (
+                <div
+                  key={v.id}
+                  className="flex items-center gap-3 px-5 py-4 hover:bg-gray-50/70 transition"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+                    <Syringe className="w-4 h-4 text-indigo-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-900 truncate">
+                      {v.vaccineName}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {v.animalId
+                        ? (findAnimal(v.animalId)?.name ??
+                          `Animal #${v.animalId}`)
+                        : (findLot(v.lotId)?.name ?? `Lot #${v.lotId}`)}
+                    </p>
+                  </div>
+                  <span className="flex items-center gap-1 text-xs text-gray-400 shrink-0">
+                    <Calendar className="w-3 h-3" /> {fmtDate(v.dateGiven)}
+                  </span>
+                  {v.nextDue && (
+                    <span className="text-xs bg-amber-50 text-amber-600 font-semibold px-2 py-1 rounded-lg shrink-0">
+                      Rappel {fmtDate(v.nextDue)}
+                    </span>
+                  )}
+                  <StatusBadge confirmed={Boolean(v.vaccinated)} />
+                  {(() => {
+                    const status = getVaccinationStatus(v);
+
+                    if (status.state === "ready") {
+                      return (
+                        <button
+                          onClick={() => handleConfirmVaccination(v.id)}
+                          disabled={confirmingId === v.id}
+                          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-vert text-white hover:bg-dark_vert transition disabled:opacity-50 shrink-0"
+                        >
+                          {confirmingId === v.id ? (
+                            <Spinner className="w-3 h-3" />
+                          ) : (
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          )}
+                          Confirmer
+                        </button>
+                      );
+                    }
+                    if (status.state === "waiting") {
+                      return (
+                        <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-400 shrink-0">
+                          <Clock className="w-3.5 h-3.5" /> Rappel{" "}
+                          {fmtDate(status.date)}
                         </span>
-                      </div>
+                      );
+                    }
+                    if (status.state === "notyet") {
+                      return (
+                        <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-400 shrink-0">
+                          Prévue {fmtDate(status.date)}
+                        </span>
+                      );
+                    }
+                    if (status.state === "missed") {
+                      return (
+                        <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-50 text-rouge shrink-0">
+                          Rappel manqué
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => {
+                        setEditingVacc(v);
+                        setShowVaccForm(true);
+                      }}
+                      className="p-2 hover:bg-gray-100 rounded-lg transition text-gray-400 hover:text-gray-700"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() =>
+                        setDeleteTarget({ type: "vaccinations", id: v.id })
+                      }
+                      className="p-2 hover:bg-red-50 rounded-lg transition text-gray-400 hover:text-red-500"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        ) : filteredTreat.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-gray-100 flex flex-col items-center justify-center py-24 gap-3 text-gray-400">
+            <Pill className="w-10 h-10 text-gray-200" />
+            <p className="font-semibold text-gray-500">
+              Aucun traitement enregistré
+            </p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50">
+            {filteredTreat.map((treatments:FetchTreatment) => (
+              <div
+                key={treatments.id}
+                className="flex items-center gap-3 px-5 py-4 hover:bg-gray-50/70 transition"
+              >
+                <div className="w-9 h-9 rounded-xl bg-yellow-50 flex items-center justify-center shrink-0">
+                  <Pill className="w-4 h-4 text-jaune" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-gray-900 truncate">
+                    {treatments.treatmentName}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {treatments.animalId
+                      ? (findAnimal(treatments.animalId)?.name ??
+                        `Animal #${treatments.animalId}`)
+                      : (findLot(treatments.lotId)?.name ?? `Lot #${treatments.lotId}`)}
+                    {treatments.dosage ? ` · ${treatments.dosage}` : ""}
+                  </p>
+                </div>
+                <span className="flex items-center gap-1 text-xs text-gray-400 shrink-0">
+                  <Calendar className="w-3 h-3" /> {fmtDate(treatments.startDate)}
+                  {treatments.endDate ? ` → ${fmtDate(treatments.endDate)}` : ""}
+                </span>
+                <StatusBadge confirmed={Boolean(treatments.treated)} />
+                {(() => {
+                  const status = getTreatmentStatus(treatments);
+
+                  if (status.state === "ready") {
+                    return (
+                      <button
+                        onClick={() => handleConfirmTreatment(treatments.id)}
+                        disabled={confirmingId === treatments.id}
+                        className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-vert text-white hover:bg-emerald-700 transition disabled:opacity-50 shrink-0"
+                      >
+                        {confirmingId === treatments.id ? (
+                          <Spinner className="w-3 h-3" />
+                        ) : (
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        )}
+                        Confirmer
+                      </button>
                     );
-                  })}
+                  }
+                  if (status.state === "waiting") {
+                    return (
+                      <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-400 shrink-0">
+                        <Clock className="w-3.5 h-3.5" /> Prochaine dose{" "}
+                        {fmtDate(status.date)}
+                      </span>
+                    );
+                  }
+                  if (status.state === "notyet") {
+                    return (
+                      <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-400 shrink-0">
+                        Débute {fmtDate(status.date)}
+                      </span>
+                    );
+                  }
+                  return (
+                    <span className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-500 shrink-0">
+                      Terminé
+                    </span>
+                  ); // "done"
+                })()}
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => {
+                      setEditingTreat(treatments);
+                      setShowTreatForm(true);
+                    }}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition text-gray-400 hover:text-gray-700"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() =>
+                      setDeleteTarget({ type: "treatments", id: treatments.id })
+                    }
+                    className="p-2 hover:bg-red-50 rounded-lg transition text-gray-400 hover:text-red-500"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      )}
-
-      {/* ══ MODAL DÉTAIL ══ */}
-      {detailVaccin && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setDetailVaccin(null)} />
-          <div className="relative bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-            <button onClick={() => setDetailVaccin(null)} className="absolute top-4 right-4 z-10 p-1.5 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-500 transition-colors">
-              <X size={15} />
-            </button>
-            {(() => {
-              const u  = getUrgency(detailVaccin.nextDue);
-              const UI = u.icon;
-              return (
-                <>
-                  <div className="p-6 pb-4 border-b border-gray-100">
-                    <div className="flex items-center gap-2 flex-wrap mb-2">
-                      <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide inline-flex items-center gap-1 ${pillClass[u.color]}`}>
-                        <UI size={10} /> {u.label}
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-black text-gray-900 pr-8">{detailVaccin.vaccineName}</h3>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <span className="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 px-2.5 py-1 rounded-lg font-medium">
-                        <User size={11} /> {detailVaccin.animalName}
-                      </span>
-                      {detailVaccin.speciesName !== "—" && (
-                        <span className="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 px-2.5 py-1 rounded-lg font-medium">
-                          <Activity size={11} /> {detailVaccin.speciesName}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="p-6 flex flex-col gap-4">
-                    <div>
-                      <p className="flex items-center gap-1.5 text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">
-                        <Calendar size={11} /> Date d'administration
-                      </p>
-                      <p className="text-sm text-gray-700 bg-gray-50 rounded-xl p-3">{fmt(detailVaccin.dateGiven)}</p>
-                    </div>
-                    {detailVaccin.nextDue && (
-                      <div>
-                        <p className="flex items-center gap-1.5 text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">
-                          <Bell size={11} /> Prochain rappel
-                        </p>
-                        <p className="text-sm text-jaune bg-blue-50 rounded-xl p-3">{fmt(detailVaccin.nextDue)}</p>
-                      </div>
-                    )}
-                    {detailVaccin.adminName !== "—" && (
-                      <div>
-                        <p className="flex items-center gap-1.5 text-[10px] font-black text-gray-400 uppercase tracking-wider mb-2">
-                          <User size={11} /> Administré par
-                        </p>
-                        <p className="text-sm text-gray-700 bg-gray-50 rounded-xl p-3">{detailVaccin.adminName}</p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="px-6 pb-6 flex gap-3">
-                    <button
-                      onClick={() => { setEditingVaccin(detailVaccin); setDetailVaccin(null); setShowForm(true); }}
-                      className="flex-1 flex items-center justify-center gap-2 py-3 bg-blue-50 hover:bg-jaune/10 text-jaune rounded-2xl font-bold text-sm transition-colors"
-                    >
-                      <Pencil size={14} /> Modifier
-                    </button>
-                    <button
-                      onClick={() => { setConfirmDeleteId(detailVaccin.id); setDetailVaccin(null); }}
-                      className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-2xl font-bold text-sm transition-colors"
-                    >
-                      <Trash2 size={14} /> Supprimer
-                    </button>
-                  </div>
-                </>
-              );
-            })()}
+            ))}
           </div>
-        </div>
+        )}
+      </div>
+
+      {showVaccForm && farmId && (
+        <VaccinationFormModal
+          farmId={farmId}
+          animals={animals}
+          lots={lots}
+          medications={medications}
+          initial={editingVacc}
+          onClose={() => {
+            setShowVaccForm(false);
+            setEditingVacc(null);
+          }}
+          onSuccess={() => {
+            setShowVaccForm(false);
+            setEditingVacc(null);
+            dispatch(fetchVaccination({ farmId, limit: 200 }));
+          }}
+        />
       )}
 
-      {/* ══ MODAL SUPPRESSION ══ */}
-      {confirmDeleteId !== null && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => !isDeleting && setConfirmDeleteId(null)} />
-          <div className="relative bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6">
-            <div className="inline-flex p-3.5 bg-red-100 text-red-600 rounded-2xl mb-4"><Trash2 size={22} /></div>
-            <h3 className="text-base font-black text-gray-900 mb-1">Supprimer ce vaccin ?</h3>
-            <p className="text-sm text-gray-500 mb-5">Cette action est définitive et ne peut pas être annulée.</p>
-            <div className="flex gap-3">
+      {showTreatForm && farmId && (
+        <TreatmentFormModal
+          farmId={farmId}
+          animals={animals}
+          lots={lots}
+          medications={medications}
+          initial={editingTreat}
+          onClose={() => {
+            setShowTreatForm(false);
+            setEditingTreat(null);
+          }}
+          onSuccess={() => {
+            setShowTreatForm(false);
+            setEditingTreat(null);
+            dispatch(fetchTreatments({ farmId, limit: 200 }));
+          }}
+        />
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[110] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl border border-gray-100">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-red-500" />
+              </div>
+              <h3 className="text-base font-bold text-gray-900">
+                Supprimer{" "}
+                {deleteTarget.type === "vaccinations"
+                  ? "cette vaccination"
+                  : "ce traitement"}{" "}
+                ?
+              </h3>
+            </div>
+            <p className="text-sm text-gray-500 mb-5 bg-red-50 rounded-xl p-3 border border-red-100">
+              Cette action est irréversible.
+            </p>
+            <div className="flex gap-2">
               <button
+                onClick={() => setDeleteTarget(null)}
                 disabled={isDeleting}
-                onClick={() => setConfirmDeleteId(null)}
-                className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-sm transition-colors disabled:opacity-50"
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200 transition disabled:opacity-50"
               >
                 Annuler
               </button>
               <button
+                onClick={handleDelete}
                 disabled={isDeleting}
-                onClick={() => handleDelete(confirmDeleteId)}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm shadow-md shadow-red-200 transition-colors disabled:opacity-60"
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-red-500 text-white hover:bg-red-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {isDeleting
-                  ? <><div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Suppression...</>
-                  : <><Trash2 size={14} /> Supprimer</>
-                }
+                {isDeleting ? (
+                  <>
+                    <Spinner /> Suppression…
+                  </>
+                ) : (
+                  "Confirmer"
+                )}
               </button>
             </div>
           </div>
         </div>
       )}
-
-      {/* ══ MODAL FORMULAIRE ══ */}
-      {showForm && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => { setShowForm(false); setEditingVaccin(null); }} />
-          <div className="relative w-full max-w-lg">
-            <VaccinationForm
-              farmId={farmId}
-              initialData={editingVaccin ?? undefined}
-              onSuccess={() => { setShowForm(false); setEditingVaccin(null); loadVaccinations(); }}
-              onCancel={() => { setShowForm(false); setEditingVaccin(null); }}
-            />
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   );
 };
 
-export default VaccinationDashboard;
+export default VaccinsTraitementsDashboard;

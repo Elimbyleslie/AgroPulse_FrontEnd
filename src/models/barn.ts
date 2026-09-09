@@ -11,6 +11,5 @@ export interface Barn {
   createdAt: Date;
   pens?: Pen[];
   lots?: FecthLot[];
-  herd:Herd
-  
+  herd:Herd  
 }
