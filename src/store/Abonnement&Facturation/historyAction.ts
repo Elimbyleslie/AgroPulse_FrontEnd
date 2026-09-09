@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { fetchWithAuth } from "../../lib/fetchwithAuth";
 import { ROUTES } from "../../constants/apiRoutes";
@@ -6,14 +5,13 @@ import { handleApiResult } from "../../lib/handleApiResult";
 import extractApiError from "../../lib/errorextrator";
 import { ApiError, ApiResponse, Pagination } from "../../models/store";
 import {
-  Payment,
   PaymentWithRelations,
   Invoice,
   InvoiceStatus,
   InvoiceWithSubscription,
   CreateInvoicePayload,
-  CreatePaymentPayload,
 } from "../../models/historyPayment";
+import { Payment, CreatePaymentPayload } from "../../models/gestionFinanciere";
 
 // =====================================================
 // PAYMENTS (ferme)

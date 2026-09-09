@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import  { useEffect, useState, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '../../hooks/store';
 import { getAllLots, deleteLot } from '../../store/lot/action';
 import { Layers, Trash2, Plus, Search, X, Loader2, Calendar, Hash, MapPin, Users } from 'lucide-react';

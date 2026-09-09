@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createSlice } from "@reduxjs/toolkit";
 import { ApiError } from "../../models/store";
@@ -47,10 +46,17 @@ interface DomainState<T> {
   loading: boolean;
   error: ApiError | null;
   success: boolean;
+  data: T | null;
 }
 
+
+
+
+
+
+
+
 interface AlimentationState {
-  // Inventory (anciennement FeedStock)
   Inventory: Inventory[];
   currentInventory: Inventory | null;
   InventoryPagination: Pagination | null;
@@ -79,6 +85,7 @@ const domainInit = <T>(): DomainState<T> => ({
   loading: false,
   error: null,
   success: false,
+  data: null,
 });
 
 const initialState: AlimentationState = {
@@ -154,11 +161,12 @@ const alimentationSlice = createSlice({
 
     builder
       .addCase(createInventory.pending, (state) => {
-        state.InventoryState = { loading: true, error: null, success: false };
+        state.InventoryState = { loading: true, error: null, success: false, data: null };
       })
       .addCase(createInventory.fulfilled, (state, action) => {
         state.InventoryState.loading = false;
         state.InventoryState.success = true;
+        state.InventoryState.data = action.payload.data as Inventory;     
         state.Inventory.unshift(action.payload.data as Inventory);
       })
       .addCase(createInventory.rejected, (state, action) => {
@@ -183,7 +191,7 @@ const alimentationSlice = createSlice({
 
     builder
       .addCase(updateInventory.pending, (state) => {
-        state.InventoryState = { loading: true, error: null, success: false };
+        state.InventoryState = { loading: true, error: null, success: false, data: null };
       })
       .addCase(updateInventory.fulfilled, (state, action) => {
         state.InventoryState.loading = false;
@@ -203,7 +211,7 @@ const alimentationSlice = createSlice({
 
     builder
       .addCase(deleteInventory.pending, (state) => {
-        state.InventoryState = { loading: true, error: null, success: false };
+        state.InventoryState = { loading: true, error: null, success: false , data: null};
       })
       .addCase(deleteInventory.fulfilled, (state, action) => {
         state.InventoryState.loading = false;
@@ -241,7 +249,7 @@ const alimentationSlice = createSlice({
 
     builder
       .addCase(createFeedUsage.pending, (state) => {
-        state.feedUsageState = { loading: true, error: null, success: false };
+        state.feedUsageState = { loading: true, error: null, success: false , data: null};
       })
       .addCase(createFeedUsage.fulfilled, (state, action) => {
         state.feedUsageState.loading = false;
@@ -273,7 +281,7 @@ const alimentationSlice = createSlice({
 
     builder
       .addCase(updateFeedUsage.pending, (state) => {
-        state.feedUsageState = { loading: true, error: null, success: false };
+        state.feedUsageState = { loading: true, error: null, success: false , data: null};
       })
       .addCase(updateFeedUsage.fulfilled, (state, action) => {
         state.feedUsageState.loading = false;
@@ -293,7 +301,7 @@ const alimentationSlice = createSlice({
 
     builder
       .addCase(deleteFeedUsage.pending, (state) => {
-        state.feedUsageState = { loading: true, error: null, success: false };
+        state.feedUsageState = { loading: true, error: null, success: false , data: null};
       })
       .addCase(deleteFeedUsage.fulfilled, (state, action) => {
         state.feedUsageState.loading = false;
@@ -335,6 +343,7 @@ const alimentationSlice = createSlice({
           loading: true,
           error: null,
           success: false,
+          data: null,
         };
       })
       .addCase(createAnimalFeeding.fulfilled, (state, action) => {
@@ -368,6 +377,7 @@ const alimentationSlice = createSlice({
           loading: true,
           error: null,
           success: false,
+          data: null,
         };
       })
       .addCase(updateAnimalFeeding.fulfilled, (state, action) => {
@@ -392,6 +402,7 @@ const alimentationSlice = createSlice({
           loading: true,
           error: null,
           success: false,
+          data: null,
         };
       })
       .addCase(deleteAnimalFeeding.fulfilled, (state, action) => {
@@ -448,12 +459,13 @@ const alimentationSlice = createSlice({
 
     builder
       .addCase(createFeedingPlan.pending, (state) => {
-        state.feedingPlanState = { loading: true, error: null, success: false };
+        state.feedingPlanState = { loading: true, error: null, success: false, data: null };
       })
       .addCase(createFeedingPlan.fulfilled, (state, action) => {
         state.feedingPlanState.loading = false;
         state.feedingPlanState.success = true;
-        state.feedingPlans.unshift(action.payload.data as FeedingPlan);
+        state.feedingPlanState.data = action.payload.data as FeedingPlan;
+        state.feedingPlans.unshift(state.feedingPlanState.data);
       })
       .addCase(createFeedingPlan.rejected, (state, action) => {
         state.feedingPlanState.loading = false;
@@ -462,7 +474,7 @@ const alimentationSlice = createSlice({
 
     builder
       .addCase(updateFeedingPlan.pending, (state) => {
-        state.feedingPlanState = { loading: true, error: null, success: false };
+        state.feedingPlanState = { loading: true, error: null, success: false, data: null };
       })
       .addCase(updateFeedingPlan.fulfilled, (state, action) => {
         state.feedingPlanState.loading = false;
@@ -482,7 +494,7 @@ const alimentationSlice = createSlice({
 
     builder
       .addCase(deleteFeedingPlan.pending, (state) => {
-        state.feedingPlanState = { loading: true, error: null, success: false };
+        state.feedingPlanState = { loading: true, error: null, success: false, data: null };
       })
       .addCase(deleteFeedingPlan.fulfilled, (state, action) => {
         state.feedingPlanState.loading = false;
@@ -502,12 +514,13 @@ const alimentationSlice = createSlice({
 
     builder
       .addCase(getFeedingPlanById.pending, (state) => {
-        state.feedingPlanState = { loading: true, error: null, success: false };
+        state.feedingPlanState = { loading: true, error: null, success: false , data: null};
       })
       .addCase(getFeedingPlanById.fulfilled, (state, action) => {
         state.feedingPlanState.loading = false;
         state.feedingPlanState.success = true;
-        state.currentFeedingPlan = action.payload.data as FeedingPlan;
+        state.feedingPlanState.data = action.payload.data as FeedingPlan;
+        state.currentFeedingPlan = state.feedingPlanState.data;
       })
       .addCase(getFeedingPlanById.rejected, (state, action) => {
         state.feedingPlanState.loading = false;

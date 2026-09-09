@@ -4,7 +4,7 @@ import {
   selectIsAuthenticated,
   selectCurrentUser, 
   selectAuthStatus,
-  selectAccessToken,
+  selectAccessToken
 } from "../store/auth/slice";
 
 export function useAuth() {
